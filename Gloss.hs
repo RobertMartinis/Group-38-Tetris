@@ -25,13 +25,26 @@ rotateBlockRight ((a1, a2, a3, a4),
 	                               (a2, b2, c2, d2),
 	                               (a1, b1, c1, d1))
 -}
-initialField :: [[GridSquare]]
-initialField = take 20 (repeat (take 10 (repeat (False,black))))
-
 data GameState = Game { fallingBlock :: (Block,Color,(Int,Int)),
                         playField :: [[GridSquare]],
 			tick :: Int
                       }
+
+
+
+initialField :: [[GridSquare]]
+initialField = take 20 (repeat (take 10 (repeat (False,black))))
+
+initialBlock = ([[True,True,True,False],
+                 [False,True,False,False],
+		 [False,False,False,False],
+		 [False,False,False,False]],black,(7,18))
+
+initialGameState :: GameState
+initialGameState = Game { fallingBlock = initialBlock,
+                         playField = initialField,
+			 tick = 1
+		       }
 
 fallStep :: GameState -> GameState
 fallStep game = game {fallingBlock = (block, color, (x, newY))}
@@ -60,32 +73,44 @@ placeBlock game = game {
       | n == 0 = newVal:xs
       | otherwise = x:replaceNth (n-1) newVal xs
 
-    placeRow :: [Bool] -> [GridSquare] -> Color -> [GridSquare]
-    placeRow _ [] _ = []
-    placeRow (x:xs) (y:ys) color | x = (True,color):(placeRow xs ys color)
-                                 | otherwise = y:(placeRow xs ys color)
+    placeRow :: [Bool] -> [GridSquare] -> Color -> Int -> [GridSquare]
+    placeRow _ [] _ _ = []
+    placeRow [] ys _ _ = ys
+    placeRow (x:xs) (y:ys) color 0 | x         = (True,color) : (placeRow xs ys color 0)
+                                   | otherwise = y : (placeRow xs ys color 0)
+    placeRow (x:xs) (y:ys) color xc = y : placeRow (x:xs) ys color (xc-1)
     
     place :: (Block, Color, (Int,Int)) -> [[GridSquare]] -> [[GridSquare]]
     place (block,color,(xc,0)) (a:[]) =
-      (placeRow (block!!0) a color: [])
+      (placeRow (block!!0) a color xc: [])
       
     place (block,color,(xc,0)) (a:b:[]) =
-      (placeRow (block!!0) a color:
-         placeRow (block!!1) b color: [])
+      (placeRow (block!!0) a color xc:
+         placeRow (block!!1) b color xc: [])
 	 
     place (block,color,(xc,0)) (a:b:c:[]) =
-      (placeRow (block!!0) a color:
-         placeRow (block!!1) b color:
-	   placeRow (block!!2) c color: [])
+      (placeRow (block!!0) a color xc:
+         placeRow (block!!1) b color xc:
+	   placeRow (block!!2) c color xc: [])
 	   
     place (block,color,(xc,0)) (a:b:c:d:xs) =
-      (placeRow (block!!0) a color:
-         placeRow (block!!1) b color:
-           placeRow (block!!2) c color:
-             placeRow (block!!3) d color: [])
+      (placeRow (block!!0) a color xc:
+         placeRow (block!!1) b color xc:
+           placeRow (block!!2) c color xc:
+             placeRow (block!!3) d color xc: xs) 
 	     
     place (block,color,(xc,yc)) (x:xs) = x : place (block,color,(xc,yc-1)) xs
 
 
     newField = place (fallingBlock game) (playField game)
 
+stringify :: [[GridSquare]] -> IO ()
+stringify (x:[]) = putStrLn (stringify' x) 
+stringify (x:xs) = do
+  putStrLn (stringify' x)
+  stringify xs
+
+stringify' :: [GridSquare] -> String
+stringify' [] = []
+stringify' ((cell,color):xs) | cell = "o" ++ stringify' xs
+                             | otherwise = "x" ++ stringify' xs
