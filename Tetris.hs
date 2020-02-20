@@ -9,48 +9,81 @@ type Square = [Picture]
 
 type GridSquare = (Cell, Color)
 
-data Cell = Empty | Full deriving (Show)
+data Cell = Empty | Full deriving (Show, Eq, Ord)
 
 
 type Block = ((Cell, Cell, Cell, Cell),
               (Cell, Cell, Cell, Cell),
               (Cell, Cell, Cell, Cell),
-              (Cell, Cell, Cell, Cell)) 
+              (Cell, Cell, Cell, Cell))
+
+
+newBlock = ((((Empty,Empty,Empty,Empty),
+              (Empty,Empty,Empty,Empty),
+              (Empty,Full,Full,Full),
+              (Empty,Empty,Full,Empty)),red), (5, 0))
+
+fullBlock = ((Full, Full, Full, Full),
+             (Full, Full, Full, Full),
+             (Full, Full, Full, Full),
+             (Full, Full, Full, Full))
 
 
 data GameState = Game
-  { fallingBlock :: (Block, Color, (Int, Int)),
-   playField :: [[GridSquare]]
-   --tick :: Int
+  { fallingBlock :: ((Block, Color),(Int, Int)),
+   playField :: [[GridSquare]],
+   tick :: Int
   }
 
--- clearRow
-
---
-
---picturify :: [[GridSquare]] ->
+replaceCell :: Int -> a -> [a] -> [a]
+replaceCell _ _ [] = []
+replaceCell n newCell (x:xs)
+  | n == 0 = newCell:xs
+  | otherwise = x:replaceCell (n-1) newCell xs
+  
+{-
+placeBlock :: GameState -> GameState
+placeBlock game = game {fallingBlock = newBlock, playField = newField}
+  where
+    ((block,color),(x,y)) = fallingBlock game
+    --newBlock = randomBlock
+    newField =
+-}
 
 initialField :: [[GridSquare]]
 initialField = take 20 (repeat (take 10 (repeat (Empty,black))))
 
 
 
+stringify :: [[GridSquare]] -> IO ()
+stringify (x:[]) = putStrLn (stringify' x) 
+stringify (x:xs) = do
+  putStrLn (stringify' x)
+  stringify xs
+
+stringify' :: [GridSquare] -> String
+stringify' [] = []
+stringify' ((cell,color):xs) | cell == Empty = "o" ++ stringify' xs
+                       | otherwise = "x" ++ stringify' xs
+
+
+
 fallStep :: GameState -> GameState
-fallStep game = game {fallingBlock = (block, color, (x, newY))}
+fallStep game = game {fallingBlock = ((block,color), (x, newY))}
   where
-    (block, color, (x,y)) = fallingBlock game
+    ((block, color), (x,y)) = fallingBlock game
     newY = y - 1
 
 moveRight :: GameState -> GameState
-moveRight game = game {fallingBlock = (block, color, (newX, y))}
+moveRight game = game {fallingBlock = ((block, color), (newX, y))}
   where
-    (block, color, (x,y)) = fallingBlock game
+    ((block, color), (x,y)) = fallingBlock game
     newX = x + 1
 
 moveLeft :: GameState -> GameState
-moveLeft game = game {fallingBlock = (block, color, (newX, y))}
+moveLeft game = game {fallingBlock = ((block, color), (newX, y))}
   where
-    (block,color,(x,y)) = fallingBlock game
+    ((block,color),(x,y)) = fallingBlock game
     newX = x - 1
 
 fst' :: (a, a, a, a) -> a
@@ -83,15 +116,8 @@ rotateLeft  ((a1, a2, a3, a4),
                                   (a2, b2, c2, d2),
                                   (a1, b1, c1, d1))
 
- {-
-tBlock_test = ((False, False, False, False),
-               
-               (False, False, False, False),
-               
-               (False, True, True, True),
-               
-               (False, False, True, False))
--}
+
+  
 translate' :: Block -> IO ()
 translate' (a,b,c,d) = do
   putStrLn (show(a))
