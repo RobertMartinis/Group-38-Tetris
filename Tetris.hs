@@ -1,4 +1,5 @@
 import Graphics.Gloss
+import Data.List
 
 main :: IO ()
 main = display window white (pictures [(pictures tBlock),(translate 100 0(pictures iBlock))])
@@ -12,25 +13,24 @@ type GridSquare = (Cell, Color)
 data Cell = Empty | Full deriving (Show, Eq, Ord)
 
 
+
 type Block = ((Cell, Cell, Cell, Cell),
               (Cell, Cell, Cell, Cell),
               (Cell, Cell, Cell, Cell),
               (Cell, Cell, Cell, Cell))
 
+tBlock2 = ((Empty,Empty,Empty,Empty),
+          (Empty,Empty,Empty,Empty),
+          (Empty,Full,Full,Full),
+          (Empty,Empty,Full,Empty))
 
-newBlock = ((((Empty,Empty,Empty,Empty),
-              (Empty,Empty,Empty,Empty),
-              (Empty,Full,Full,Full),
-              (Empty,Empty,Full,Empty)),red), (5, 0))
-
-fullBlock = ((Full, Full, Full, Full),
-             (Full, Full, Full, Full),
-             (Full, Full, Full, Full),
-             (Full, Full, Full, Full))
-
-
+iBlock2 = ((Empty,Empty,Empty,Empty),
+          (Empty,Empty,Empty,Empty),
+          (Empty,Empty,Empty,Empty),
+          (Full,Full,Full,Full))
+  
 data GameState = Game
-  { fallingBlock :: ((Block, Color),(Int, Int)),
+  { fallingBlock :: ((Block, Color),(Int,Int)),
    playField :: [[GridSquare]],
    tick :: Int
   }
@@ -41,14 +41,65 @@ replaceCell n newCell (x:xs)
   | n == 0 = newCell:xs
   | otherwise = x:replaceCell (n-1) newCell xs
   
+findCords :: (Int,Int) -> Block -> [(Int,Int)]
+findCords (xc,yc) block = mergeList((findFull (xc,yc) (fst' block)):(findFull (xc,(yc+1)) (snd' block)):(findFull (xc,(yc+2)) (trd' block)):(findFull (xc,(yc+3)) (fth' block)):[])
+  where
+    -- Merge a list made of lists into one list
+    mergeList :: [[a]] -> [a]
+    mergeList [[]] = []
+    mergeList [] = []
+    mergeList (x:xs) = x ++ mergeList xs
+
+    -- Find coordinates of all Cells in one row made of Tuples
+    findFull :: (Int,Int) -> (Cell,Cell,Cell,Cell) -> [(Int,Int)]
+    findFull (xc,yc) (a,b,c,d) = findFull' (xc,yc) (tupleList (a,b,c,d))
+
+    -- Find coordinates of all Cells in one row made of Lists
+    findFull' :: (Int,Int) -> [Cell] -> [(Int,Int)]
+    findFull' (_,_) [] = []
+    findFull' (xc,yc) (x:xs) | x == Full = (xc,yc) : findFull' (xc+1,yc) xs
+                             | otherwise = findFull' ((xc+1),yc) xs
+
+    -- Convert a tuple with 4 elements to a list
+    tupleList :: (Cell,Cell,Cell,Cell) -> [Cell]
+    tupleList (a,b,c,d) = [a,b,c,d]
+
+    fst' :: (a, a, a, a) -> a
+    fst' (a,_,_,_) = a
+
+    snd' :: (a, a, a, a) -> a
+    snd' (_,a,_,_) = a
+
+    trd' :: (a, a, a, a) -> a
+    trd' (_,_,a,_) = a
+
+    fth' :: (a, a, a, a) -> a
+    fth' (_,_,_,a) = a
+
+placeBlock' :: Int -> Color -> [(Int,Int)] -> [[GridSquare]] -> [[GridSquare]]
+placeBlock' 20 _ _ _ = [[]]
+placeBlock' _ _ [] _ = [[]]
+placeBlock' rowNum color cords (x:xs) = (placeRow rowNum color cords x) : (placeBlock' (rowNum+1) color cords xs) 
+
+placeRow :: Int -> Color -> [(Int,Int)] -> [GridSquare] -> [GridSquare]
+placeRow _ _ [] _ = []
+placeRow rowNum color (x:xs) (y:ys) | (snd(x)) == rowNum = (Full,color) : placeRow rowNum color xs ys
+                                    | otherwise = (Empty,color) : placeRow rowNum color xs ys
 {-
 placeBlock :: GameState -> GameState
-placeBlock game = game {fallingBlock = newBlock, playField = newField}
+placeBlock game = game { playField = newField }
   where
-    ((block,color),(x,y)) = fallingBlock game
-    --newBlock = randomBlock
-    newField =
+    (block, color (x,y)) = fallingBlock game
+    field = playField game
+    placeBlock' :: (Int,Int) [GridSquare] ->
 -}
+
+fixRow' :: Color -> [Cell] -> [GridSquare] -> [GridSquare]
+fixRow' _ [] _ = []
+fixRow' color (x:xs) k | x == Full = (Full,color) : fixRow' color xs k
+                       | otherwise = (Empty,color) : fixRow' color xs k
+
+
 
 initialField :: [[GridSquare]]
 initialField = take 20 (repeat (take 10 (repeat (Empty,black))))
@@ -63,8 +114,8 @@ stringify (x:xs) = do
 
 stringify' :: [GridSquare] -> String
 stringify' [] = []
-stringify' ((cell,color):xs) | cell == Empty = "o" ++ stringify' xs
-                       | otherwise = "x" ++ stringify' xs
+stringify' ((cell,color):xs) | cell == Empty = "O " ++ stringify' xs
+                             | otherwise = "X " ++ stringify' xs
 
 
 
@@ -85,18 +136,6 @@ moveLeft game = game {fallingBlock = ((block, color), (newX, y))}
   where
     ((block,color),(x,y)) = fallingBlock game
     newX = x - 1
-
-fst' :: (a, a, a, a) -> a
-fst' (_,_,a,_) = a
-
-snd' :: (a, a, a, a) -> a
-snd' (_,_,a,_) = a
-
-trd' :: (a, a, a, a) -> a
-trd' (_,_,a,_) = a
-
-fth' :: (a, a, a, a) -> a
-fth' (_,_,_,a) = a
 
 rotateRight :: Block -> Block
 rotateRight ((a1, a2, a3, a4),
