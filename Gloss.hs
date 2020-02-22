@@ -38,7 +38,7 @@ initialField = take 20 (repeat (take 10 (repeat (False,black))))
 initialBlock = ([[True,True,True,False],
                  [False,True,False,False],
 		 [False,False,False,False],
-		 [False,False,False,False]],black,(7,18))
+		 [False,False,False,False]],green,(7,15))
 
 initialGameState :: GameState
 initialGameState = Game { fallingBlock = initialBlock,
@@ -104,7 +104,10 @@ placeBlock game = game {
 
     newField = place (fallingBlock game) (playField game)
 
-stringify :: [[GridSquare]] -> IO ()
+
+-- | Render the play field with text in console
+
+stringify :: [[GridSquare]] -> IO () 
 stringify (x:[]) = putStrLn (stringify' x) 
 stringify (x:xs) = do
   putStrLn (stringify' x)
@@ -112,5 +115,35 @@ stringify (x:xs) = do
 
 stringify' :: [GridSquare] -> String
 stringify' [] = []
-stringify' ((cell,color):xs) | cell = "o" ++ stringify' xs
-                             | otherwise = "x" ++ stringify' xs
+stringify' ((cell,color):xs) | cell = "x " ++ stringify' xs
+                             | otherwise = "_ " ++ stringify' xs
+
+
+
+-- | Render gamestate with Gloss
+
+renderGame :: GameState -> Picture
+renderGame game = pictures [
+                    playfield--,fallingblock
+		    ]
+  where
+    playfield = gridFromField (playField game) 0 --0 är accumulator som håller koll på y-koordinat/vilken rad
+--makeColor8 (0,0,0,0) == transparent
+--fallingblock =
+
+    gridFromField :: [[GridSquare]] -> Int -> Picture
+    gridFromField (x:xs) 19 = rowOfSquares x 19 0
+    gridFromField (x:xs) r  = pictures [
+                                       (rowOfSquares x r 0), --denna 0a är accumulator som håller koll på x-koordinat/vilken kolumn
+				       gridFromField xs (r+1)
+				       ]
+
+    rowOfSquares :: [GridSquare] -> Int -> Int -> Picture
+    rowOfSquares (x:xs) r 9 = createSquare x (9,r)
+    rowOfSquares (x:xs) r c = pictures [
+                                       createSquare x (c,r),
+				       rowOfSquares xs r (c+1)
+				       ]
+
+    createSquare :: GridSquare -> (Int,Int) -> Picture
+    createSquare x (c,r) = translate (fromIntegral(c*30)) (fromIntegral(r*30)) $ color (snd x) $ translate (fromIntegral(-135)) (fromIntegral(-285)) $ circleSolid 15
