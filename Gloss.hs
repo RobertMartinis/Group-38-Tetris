@@ -1,10 +1,9 @@
 import Graphics.Gloss
 
 type Block = [[Bool]]
-
-
-
 type GridSquare = (Bool, Color)
+type Field = [[GridSquare]]
+
 {-
 rotateBlock :: Block -> Block
 rotateBlock ((a1, a2, a3, a4),
@@ -26,19 +25,30 @@ rotateBlockRight ((a1, a2, a3, a4),
 	                               (a1, b1, c1, d1))
 -}
 data GameState = Game { fallingBlock :: (Block,Color,(Int,Int)),
-                        playField :: [[GridSquare]],
+                        playField :: Field,
 			tick :: Int
                       }
 
 
 
-initialField :: [[GridSquare]]
+initialField :: Field
 initialField = take 20 (repeat (take 10 (repeat (False,black))))
 
 initialBlock = ([[True,True,True,False],
                  [False,True,False,False],
 		 [False,False,False,False],
 		 [False,False,False,False]],green,(7,15))
+
+
+initialBlock'  = [[True,True,True,False],
+                 [False,True,False,False],
+		 [False,False,False,False],
+		 [False,False,False,False]]
+		 
+initialBlock'' = [[False,False,False,False],
+                 [False,False,True,False],
+		 [False,False,False,False],
+		 [False,False,False,False]]
 
 initialGameState :: GameState
 initialGameState = Game { fallingBlock = initialBlock,
@@ -52,10 +62,6 @@ fallStep game = game {fallingBlock = (block, color, (x, newY))}
     (block,color,(x,y)) = fallingBlock game
     newY = y - 1
 
-testpics = pictures [pictures [Circle 20, Circle 10], pictures [Circle 30, Circle 40]]
-mergePics :: Picture -> Picture -> Picture
-
-mergePics a b = pictures[a, b]
 
 placeBlock :: GameState -> GameState
 placeBlock game = game {
@@ -107,7 +113,7 @@ placeBlock game = game {
 
 -- | Render the play field with text in console
 
-stringify :: [[GridSquare]] -> IO () 
+stringify :: Field -> IO () 
 stringify (x:[]) = putStrLn (stringify' x) 
 stringify (x:xs) = do
   putStrLn (stringify' x)
@@ -131,7 +137,7 @@ renderGame game = pictures [
 --makeColor8 (0,0,0,0) == transparent
 --fallingblock =
 
-    gridFromField :: [[GridSquare]] -> Int -> Picture
+    gridFromField :: Field -> Int -> Picture
     gridFromField (x:xs) 19 = rowOfSquares x 19 0
     gridFromField (x:xs) r  = pictures [
                                        (rowOfSquares x r 0), --denna 0a är accumulator som håller koll på x-koordinat/vilken kolumn
@@ -149,4 +155,75 @@ renderGame game = pictures [
     createSquare x (c,r) = translate (fromIntegral(c*30)) (fromIntegral(r*30)) $ color (snd x) $ translate (fromIntegral(-150)) (fromIntegral(-300)) $ polygon [(0,0), (0,30), (30,30), (30,0)]
 
 
+
+
+-- | Get the 4x4 grid from playField where the fallingBlock is going to appear next step
+
+nextBlockPos :: (Int,Int) -> Field -> Block
+nextBlockPos (xc,0) ((x:xs):xss) = getNextRows xc xss (4::Int) --4 because we only want the next 4 rows
+  where
+    getNextRows :: Int -> Field -> Int -> Block
+    getNextRows xc [] _ = []
+    getNextRows xc _ 0 = []
+    getNextRows xc (x:xs) n = (getInRow xc x 4) : (getNextRows xc xs (n-1))
+
+    getInRow :: Int -> [GridSquare] -> Int -> [Bool]
+    getInRow _ [] _ = []
+    getInRow _ _ 0  = []
+    getInRow 0 (x:xs) n  = (fst x) : getInRow 0 xs (n-1)
+    getInRow xc (x:xs) n = getInRow (xc-1) xs n
+
+nextBlockPos (xc,yc) ((x:xs):xss) = nextBlockPos (xc,(yc-1)) xss
+
+
+
+-- | checks collision on next step
+
+collision :: Block -> Block -> Bool  -- ^ first Block is from fallingBlock, second is from nextBlockPos
+collision [] [] = False
+collision ([]:xss) ([]:yss) = collision xss yss
+collision ((x:xs):xss) ((y:ys):yss) = (x&&y) || (collision (xs:xss) (ys:yss))
+
+-- | renders inital state of game
+
 main = display (InWindow "hello" (300,600) (0,0)) white (renderGame ( placeBlock ( initialGameState)))
+
+
+
+
+
+
+
+--olika event
+--Tick --om inget trycks ned
+  --increaseTick
+  --collision
+    --fallStep
+    --
+    --placeBlock
+    --
+    --resetTick
+
+--DownButton
+  --collision
+    --fallStep
+    --
+    --placeBlock
+    --
+    --resetTick
+
+--UpButton
+  --rotateBlock ?
+
+  --annars
+  --LeftButton
+    --rotateLeft
+
+  --RightButton
+    --rotateRight
+
+--Space
+  --fallStep tills collision True, sen placeBlock
+
+
+
