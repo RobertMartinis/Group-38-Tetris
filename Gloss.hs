@@ -146,4 +146,7 @@ renderGame game = pictures [
 				       ]
 
     createSquare :: GridSquare -> (Int,Int) -> Picture
-    createSquare x (c,r) = translate (fromIntegral(c*30)) (fromIntegral(r*30)) $ color (snd x) $ translate (fromIntegral(-135)) (fromIntegral(-285)) $ circleSolid 15
+    createSquare x (c,r) = translate (fromIntegral(c*30)) (fromIntegral(r*30)) $ color (snd x) $ translate (fromIntegral(-150)) (fromIntegral(-300)) $ polygon [(0,0), (0,30), (30,30), (30,0)]
+
+
+main = display (InWindow "hello" (300,600) (0,0)) white (renderGame ( placeBlock ( initialGameState)))
