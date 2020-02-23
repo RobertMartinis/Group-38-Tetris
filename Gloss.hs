@@ -209,7 +209,7 @@ main = display (InWindow "hello" (300,600) (0,0)) white (renderGame ( placeBlock
     --placeBlock
     --
     --resetTick
-
+--2
 --UpButton
   --rotateBlock ?
 
