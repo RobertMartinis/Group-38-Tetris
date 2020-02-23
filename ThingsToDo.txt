@@ -1,0 +1,7 @@
+Vad vi behöver göra / fundera över
+
+// Hur ska vi hantera pushes till main? Ska vi ha ett system med push-requests där alla måste godkänna en push-förfrågan, eller ska alla få pusha fritt på eget förnuft? Löst: []
+
+// Dokumentera / kommentera kod direkt. Det är ju en bra vana, och då behöver man fråga varandra mindre hur respektives kod fungerar. Löst: []
+
+// Skaffa snyggare profilbilder än github-default. Löst: []
