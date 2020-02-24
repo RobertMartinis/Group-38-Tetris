@@ -17,7 +17,7 @@ moveRows field = addRow (rowsMissing 20 (clearRows field)) (clearRows field)
     -- Adds n amount of rows 
     addRow :: Int -> Field -> Field
     addRow (-1) _ = []
-    addRow n field = addRow (n-1) [(take 5 (repeat (False,black)))] ++ field
+    addRow n field = addRow (n-1) [(take 10 (repeat (False,black)))] ++ field
 
 -- Deletes all full rows
 clearRows :: Field -> Field
