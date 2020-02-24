@@ -1,1 +1,1 @@
-A function for reading the user inputs (maybe we can combine this with rotateBlock / moveBlock?)
+A function for keeping track of the score. Will be displayed graphically. 
