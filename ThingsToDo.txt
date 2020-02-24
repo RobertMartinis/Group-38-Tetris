@@ -4,4 +4,6 @@ Vad vi behöver göra / fundera över
 
 // Dokumentera / kommentera kod direkt. Det är ju en bra vana, och då behöver man fråga varandra mindre hur respektives kod fungerar. Löst: []
 
+// Gå in på Insights -> Community och kolla på checklist. Kan vi få den helt grön? Löst: [] 
+
 // Skaffa snyggare profilbilder än github-default. Löst: []
