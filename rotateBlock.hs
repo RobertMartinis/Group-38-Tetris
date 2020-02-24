@@ -1,3 +1,15 @@
+import Graphics.Gloss
+import Graphics.Gloss.Interface.IO.Interact
+
+type Block = [[Bool]]
+type GridSquare = (Bool, Color)
+type Field = [[GridSquare]]
+
+data GameState = Game { fallingBlock :: (Block,Color,(Int,Int)),
+                        playField :: Field,
+			tick :: Int
+                      }
+
 
 rotateBlock :: GameState -> GameState
 rotateBlock game = game { fallingBlock = (newBlock,color,(x,y))
