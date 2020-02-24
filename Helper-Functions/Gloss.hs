@@ -4,7 +4,7 @@ type Block = [[Bool]]
 type GridSquare = (Bool, Color)
 type Field = [[GridSquare]]
 
-{-asd
+{-
 rotateBlock :: Block -> Block
 rotateBlock ((a1, a2, a3, a4),
              (b1, b2, b3, b4),
@@ -221,4 +221,3 @@ main = display (InWindow "hello" (300,600) (0,0)) white (renderGame ( placeBlock
     --rotateRight
 
 --Space
-  --fallStep tills collision True, sen placeBlock
