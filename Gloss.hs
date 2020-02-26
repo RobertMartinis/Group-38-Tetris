@@ -9,39 +9,6 @@ type Field = [[GridSquare]]
 type FieldRow = [GridSquare]
 type Cords = (Int,Int)
 
-moveRows :: Field -> Field
-moveRows field = addRow (rowsMissing 20 (clearRows field)) (clearRows field)
-  where
-    -- Checks how many rows are missing
-    rowsMissing :: Int -> Field -> Int
-    rowsMissing n [] = n
-    rowsMissing n (x:xs) = rowsMissing (n-1) xs
-    -- Adds n amount of rows 
-    addRow :: Int -> Field -> Field
-    addRow (-1) _ = []
-    addRow n field = addRow (n-1) [(True,green) : (take 9 (repeat (False,black)))] ++ field -- Ta bort (True,green) och take 10 istället för take 9
-
-
-
-clearRows :: Field -> Field
-clearRows [] = []
-clearRows (x:xs) | row == x = clearRows xs 
-                 | otherwise = x : clearRows xs
-                  where
-                   row = (isCleared 0 (x:xs))
-
--- Returnerar raden som är full och ska rensas
-isCleared :: Int -> Field -> FieldRow
-isCleared _ [] = []
-isCleared yc (x:xs) | isCleared' x = x 
-                    | otherwise = isCleared (yc+1) xs
-                    where
-                      -- Kollar om en rad är full
-                      isCleared' :: FieldRow -> Bool
-                      isCleared' [] = True
-                      isCleared' (x:y:xs) | (fst(y)) = isCleared' xs -- Delete y from (x:y:xs) and replace fst(y) with fst(x)
-                                          | otherwise = False
-
 -- Tetriminos
 
 tBlock  = [[True,True,True,False],
@@ -98,7 +65,8 @@ rotateBlock game = game { fallingBlock = (newBlock,color,(x,y))
 
 data GameState = Game { fallingBlock :: (Block,Color,Cords),
                         playField :: Field,
-			tick :: Int
+			tick :: Int,
+                        scoreCounter :: Int
                       }
 
 lastRowTrue :: GameState -> GameState
@@ -113,7 +81,7 @@ lastRowTrue game = game {playField = newField}
 
     c = (True,green)
 
-initialField = take 20 (repeat (take 10 (repeat (False,black))))
+initialField = take 21 (repeat (take 10 (repeat (False,black))))
 
 {-
 initialBlock = ([[False,False,False,False],
@@ -123,9 +91,10 @@ initialBlock = ([[False,False,False,False],
 -}
 
 initialGameState :: GameState
-initialGameState = Game { fallingBlock = (tBlock,green,(7,0)),
+initialGameState = Game { fallingBlock = (tBlock,green,(7,1)),
                          playField = initialField,
-			 tick = 0
+			 tick = 0,
+                         scoreCounter = 0
 		       }
 
 fallStep :: GameState -> GameState
@@ -215,12 +184,15 @@ trd' (_,_,a) = a
 
 renderGame :: GameState -> Picture
 renderGame game = pictures [
+                            scorecounter,
          		    fallingblock,
                             playfield
 		           ]
   where
     playfield = gridFromField (playField game) 0 --0 är accumulator som håller koll på y-koordinat/vilken rad
 --makeColor8 (0,0,0,0) == transparent
+
+    scorecounter = color white (Text (show (updateScore game)))
 
     gridFromField :: Field -> Int -> Picture
     gridFromField (x:xs) 19 = rowOfSquares x 19 0
@@ -285,15 +257,90 @@ collision [] [] = False
 collision ([]:xss) ([]:yss) = collision xss yss
 collision ((x:xs):xss) ((y:ys):yss) = (x&&y) || (collision (xs:xss) (ys:yss))
 
+moveRows :: GameState -> Field
+moveRows game = newField
+  where
+    field = playField game -- field = currentField
+    newField = moveRows' field
+    
+    moveRows' :: Field -> Field
+    moveRows' field = addRow (rowsMissing 20 (clearRows field)) (clearRows field)
+    -- Checks how many rows are missing
+    rowsMissing :: Int -> Field -> Int
+    rowsMissing n [] = n
+    rowsMissing n (x:xs) = rowsMissing (n-1) xs
+    -- Adds n amount of rows 
+    addRow :: Int -> Field -> Field
+    addRow (-1) _ = []
+    addRow n field = addRow (n-1) [(take 10 (repeat (False,black)))] ++ field
+
+clearRows :: Field -> Field
+clearRows [] = []
+clearRows (x:xs) | row == x = clearRows xs 
+                 | otherwise = x : clearRows xs
+                  where
+                   row = (isCleared 0 (x:xs))
+
+-- Returns the row that is full and needs to be cleared
+isCleared :: Int -> Field -> FieldRow
+isCleared _ [] = []
+isCleared yc (x:xs) | isCleared' x = x 
+                    | otherwise = isCleared (yc+1) xs
+                    where
+                      -- Kollar om en rad är full
+                      isCleared' :: FieldRow -> Bool
+                      isCleared' [] = True
+                      isCleared' (x:xs) | (fst(x)) = isCleared' xs
+                                        | otherwise = False
+
 resetBlock :: GameState -> GameState
-resetBlock game = game {fallingBlock = (block,color,(2,0)),
-                        playField = newField
+resetBlock game = game {fallingBlock = (block,color,(2,1)), --Changed y coordinate to 1
+                        playField = newField,
+                        scoreCounter = newScore
                        }
   where
     (block,color,(x,_)) = fallingBlock game
     field = playField game
-    newField = moveRows field
+    newScore = updateScore game
+    newField = moveRows game
 
+    
+updateScore :: GameState -> Int
+updateScore game = newScore
+  where
+    field = playField game
+    newScore = (scoreCounter game) + (rowsFull 0 field)
+    
+    rowsFull :: Int -> Field -> Int
+    rowsFull score [] = score
+    rowsFull score (x:xs) | rowsFull' x = rowsFull (score+10) xs
+                          | otherwise = rowsFull score xs
+    rowsFull' :: FieldRow -> Bool
+    rowsFull' [] = True
+    rowsFull' (x:xs) | (fst(x)) = rowsFull' xs
+                     | otherwise = False
+    
+
+-- Checks if game is over and if it is not, clears rows that are full (if there are any)
+
+
+
+
+{-
+gameOver :: Field -> Field
+gameOver field | gameOver' field = initialField
+               | otherwise = moveRows 
+               where
+
+                 -- Checks if the top row is full
+                 gameOver' :: GameState -> Bool
+                 gameOver' game = game {playField} fullRow x
+                 -- Checks if a row has a Full block
+                 fullRow :: [GridSquare] -> Bool
+                 fullRow [] = False
+                 fullRow ((bool,_):xs) | bool == True = True
+                                       | otherwise = fullRow xs
+-}
 increaseTick :: GameState -> GameState
 increaseTick game = game {tick = (n+1)}
   where
@@ -318,19 +365,18 @@ tryMove game = if (collision fallBlock nextPosInField) then
 -- | detects events
 
 event :: Event -> GameState -> GameState
-event (EventKey (SpecialKey KeyUp)   (Down) _ _) game =
-  rotateBlock $ increaseTick $ game
-
+event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = rotateBlock $ increaseTick $ game
 event (EventKey (SpecialKey KeyDown) (Down) _ _) game = tryMove game
-event (EventKey (SpecialKey KeyRight)(Down) _ _) game =
-  stepRight $ increaseTick $ game
-event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = stepLeft game
+event (EventKey (SpecialKey KeyRight) (Down) _ _) game = stepRight $ increaseTick $ game
+event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = stepLeft $ increaseTick $ game
 event _ game = if (checkTick (tick game)) then
 	         tryMove game
 	       else
 	         increaseTick game
-event (EventKey (Char 'q') (Down) _ _) game = initialGameState -- Not working currently, compiles but pattern match is redundant
+event (EventKey (Char 'q') (Down) _ _) game = resetGame game -- Not working currently, compiles but pattern match is redundant
     
+resetGame :: GameState -> GameState
+resetGame game = initialGameState
 
 time :: Float -> GameState -> GameState
 time _ game = game
@@ -364,7 +410,7 @@ time _ game = game
 
 
 main = play
-       (InWindow "Tetris" (300,600) (0,0))
+       (InWindow "Tetris" (500,600) (0,0))
        black
        60
        (lastRowTrue initialGameState)
