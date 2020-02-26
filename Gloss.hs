@@ -81,7 +81,6 @@ lastRowTrue game = game {playField = newField}
 
     c = (True,green)
 
-initialField = take 21 (repeat (take 10 (repeat (False,black))))
 
 {-
 initialBlock = ([[False,False,False,False],
