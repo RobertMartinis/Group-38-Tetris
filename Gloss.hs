@@ -66,18 +66,6 @@ data GameState = Game { fallingBlock :: (Block,Color,Coords),
 			tick :: Int,
                         scoreCounter :: Int}
 
-lastRowTrue :: GameState -> GameState
-lastRowTrue game = game {playField = newField}
-  where
-    field = playField game
-    newField = changeLast field
-
-    changeLast :: Field -> Field
-    changeLast (x:[]) = [c,c,c,c,c,c,c,c,c,c] : []
-    changeLast (x:xs) = x : (changeLast xs)
-
-    c = (True,green)
-
 initialField = take 20 (repeat (take 10 (repeat (False,black))))
 
 initialGameState :: GameState
@@ -105,17 +93,24 @@ stepLeft game = game {fallingBlock = (block, color, (newX, y))}
     newX = x - 1
 
 placeBlock :: GameState -> GameState
-placeBlock game = game {playField = newField}
+placeBlock game = game {
+                        playField = newField
+                       }
   where
+    --newblock =
+    
     (block, color, (x,y)) = fallingBlock game
     field = playField game
-
+    
     placeRow :: [Bool] -> FieldRow -> Color -> Int -> FieldRow
     placeRow _ [] _ _ = []
     placeRow [] ys _ _ = ys
     placeRow (x:xs) (y:ys) color 0 | x         = (True,color) : (placeRow xs ys color 0)
                                    | otherwise = y : (placeRow xs ys color 0)
-    placeRow (x:xs) (y:ys) color xc = y : placeRow (x:xs) ys color (xc-1)
+    placeRow (x:xs) (y:ys) color xc = if xc > 0 then
+                                        y : placeRow (x:xs) ys color (xc-1)
+			              else
+				        placeRow xs (y:ys) color (xc+1)
     
     place :: (Block, Color, Coords) -> Field -> Field
     place _ [] = []
@@ -139,8 +134,8 @@ placeBlock game = game {playField = newField}
 	     
     place (block,color,(xc,yc)) (x:xs) = x : place (block,color,(xc,yc-1)) xs
 
-    newField = place (fallingBlock game) (playField game)
 
+    newField = place (fallingBlock game) (playField game)
 
 -- | Render the play field with text in console
 
@@ -206,8 +201,8 @@ renderGame game = pictures [
 
 -- | Get the 4x4 grid from playField where the fallingBlock is going to appear next step
 
-nextBlockPos :: Coords -> Field -> Block
-nextBlockPos (xc,0) ((x:xs):xss) = getNextRows xc xss (4::Int) --4 because we only want the next 4 rows
+nextBlockPos :: (Int,Int) -> Field -> Block
+nextBlockPos (xc,0) (xss) = getNextRows xc xss (4::Int) --4 because we only want the next 4 rows
   where
     getNextRows :: Int -> Field -> Int -> Block
     getNextRows xc [] 0 = []
@@ -215,12 +210,15 @@ nextBlockPos (xc,0) ((x:xs):xss) = getNextRows xc xss (4::Int) --4 because we on
     getNextRows xc _ 0 = []
     getNextRows xc (x:xs) n = (getInRow xc x 4) : (getNextRows xc xs (n-1))
 
-    getInRow :: Int -> FieldRow -> Int -> [Bool]
+    getInRow :: Int -> [GridSquare] -> Int -> [Bool]
     getInRow _ [] 0 = []
     getInRow _ [] n = True : (getInRow 0 [] (n-1))
     getInRow _ _ 0  = []
     getInRow 0 (x:xs) n  = (fst x) : getInRow 0 xs (n-1)
-    getInRow xc (x:xs) n = getInRow (xc-1) xs n
+    getInRow xc (x:xs) n = if xc > 0 then
+                             getInRow (xc-1) xs n
+			   else
+			     True : getInRow (xc+1) (x:xs) (n-1)
 
 nextBlockPos (xc,yc) ((x:xs):xss) = nextBlockPos (xc,(yc-1)) xss
 
@@ -322,26 +320,54 @@ resetTick game = game {tick = 0}
 checkTick :: Int -> Bool
 checkTick n = n > 19
 
-tryMove :: GameState -> GameState
-tryMove game = if (collision fallBlock nextPosInField) then
-                 resetBlock $ placeBlock $ resetTick $ game
-	       else
-	         resetTick $ fallStep $ game
+tryRotate :: GameState -> GameState
+tryRotate game = if (collision rotatedBlock nextPosInField) then
+                   increaseTick game
+		 else
+		   rotateBlock $ increaseTick game
+		   
+		   where
+		     (rotatedBlock,_,(x,y)) = fallingBlock (rotateBlock game)
+		     nextPosInField = nextBlockPos (x,y) (playField game)
+
+tryMoveDown :: GameState -> GameState
+tryMoveDown game = if (collision fallBlock nextPosInField) then
+                     resetBlock $ placeBlock $ resetTick $ game
+                   else
+	             resetTick $ fallStep $ game
 		 
 		 where
 		   (fallBlock,_,(x,y)) = fallingBlock game
-		   nextPosInField = nextBlockPos (x,y) (playField game)
+		   nextPosInField = nextBlockPos (x,y+1) (playField game)
 
+tryMoveLeft :: GameState -> GameState
+tryMoveLeft game = if (collision fallBlock nextPosInField) then
+                     increaseTick game
+		   else
+		     increaseTick $ stepLeft game
+		     
+		     where
+		       (fallBlock,_,(x,y)) = fallingBlock game
+		       nextPosInField = take 4 (nextBlockPos (x-1,y) (playField game))
+
+tryMoveRight :: GameState -> GameState
+tryMoveRight game = if (collision fallBlock nextPosInField) then
+                      increaseTick game
+		    else
+		      increaseTick $ stepRight game
+		     
+		      where
+		        (fallBlock,_,(x,y)) = fallingBlock game
+		        nextPosInField = take 4 (nextBlockPos (x+1,y) (playField game))
 -- | detects events
 
 event :: Event -> GameState -> GameState
-event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = rotateBlock $ increaseTick $ game
-event (EventKey (SpecialKey KeyDown) (Down) _ _) game = tryMove game
-event (EventKey (SpecialKey KeyRight) (Down) _ _) game = stepRight $ increaseTick $ game
-event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = stepLeft $ increaseTick $ game
-event (EventKey (Char 'q') (Down) _ _) game = initialGameState
+event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = tryRotate game
+event (EventKey (SpecialKey KeyDown) (Down) _ _) game = tryMoveDown game
+event (EventKey (SpecialKey KeyRight)(Down) _ _) game = tryMoveRight game
+event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = tryMoveLeft game
 event _ game = if (checkTick (tick game)) then
-	         tryMove game
+	         tryMoveDown game
 	       else
 	         increaseTick game
 
