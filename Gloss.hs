@@ -1,12 +1,33 @@
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
 import System.Random
+import System.Exit
 
 type Block = [[Bool]]
 type GridSquare = (Bool, Color)
 type Field = [[GridSquare]]
 type FieldRow = [GridSquare]
 type Coords = (Int,Int)
+
+{-
+randomBlock :: [Block] -> Block
+randomBlock l = do
+  r <- show(getLine(randomRIO (0,7)))
+  randomBlock' r l
+  where
+    randomBlock' :: Int -> [Block] -> Block
+    randomBlock' 0 (x:xs) = x
+    randomBlock' r (x:xs) = randomBlock' (r-1) xs
+-}
+
+blockList = [tBlock,iBlock,oBlock,jBlock,lBlock,sBlock,zBlock]
+
+randBlock = randBlock' [tBlock,iBlock,oBlock,jBlock,lBlock,sBlock,zBlock]
+  where
+    randBlock' :: [a] -> IO a
+    randBlock' list = do
+      r <- randomRIO (0, length list - 1)
+      return $ list !! r
 
 -- Tetriminos
 tBlock  = [[True,True,True,False],
@@ -97,8 +118,6 @@ placeBlock game = game {
                         playField = newField
                        }
   where
-    --newblock =
-    
     (block, color, (x,y)) = fallingBlock game
     field = playField game
     
@@ -157,6 +176,8 @@ trd' (_,_,a) = a
 
 renderGame :: GameState -> Picture
 renderGame game = pictures [
+                            verticalLines,
+                            horizontalLines,
                             scorecounter,
          		    fallingblock,
                             playfield
@@ -164,8 +185,25 @@ renderGame game = pictures [
   where
     playfield = gridFromField (playField game) 0 --0 är accumulator som håller koll på y-koordinat/vilken rad
 --makeColor8 (0,0,0,0) == transparent
+    verticalLines = pictures (verticalLines' 0 verticalLine)
 
-    scorecounter = color white (Text (show (updateScore game)))
+    verticalLine = take 11 (repeat (color white (Line [(150,-600),(150,600)])))
+
+    verticalLines' :: Int -> [Picture] -> [Picture]
+    verticalLines' 11 _ = []
+    verticalLines' n (x:xs) = translate (fromIntegral(-30*n)) 0 x : verticalLines' (n+1) xs 
+
+
+    horizontalLine = take 20 (repeat (color white (Line [(-150,-300),(150,-300)])))
+
+    horizontalLines' :: Int -> [Picture] -> [Picture]
+    horizontalLines' 20 _ = []
+    horizontalLines' n (x:xs) = translate 0 (fromIntegral(30*n)) x : horizontalLines' (n+1) xs
+  
+    horizontalLines = pictures (horizontalLines' 0 horizontalLine)
+
+
+    scorecounter = translate (-300) 0 (scale (0.2) (0.2) (color white (Text ("Score: " ++ (show (updateScore game))))))
 
     gridFromField :: Field -> Int -> Picture
     gridFromField (x:xs) 19 = rowOfSquares x 19 0
@@ -201,7 +239,7 @@ renderGame game = pictures [
 
 -- | Get the 4x4 grid from playField where the fallingBlock is going to appear next step
 
-nextBlockPos :: (Int,Int) -> Field -> Block
+nextBlockPos :: Coords -> Field -> Block
 nextBlockPos (xc,0) (xss) = getNextRows xc xss (4::Int) --4 because we only want the next 4 rows
   where
     getNextRows :: Int -> Field -> Int -> Block
@@ -210,7 +248,7 @@ nextBlockPos (xc,0) (xss) = getNextRows xc xss (4::Int) --4 because we only want
     getNextRows xc _ 0 = []
     getNextRows xc (x:xs) n = (getInRow xc x 4) : (getNextRows xc xs (n-1))
 
-    getInRow :: Int -> [GridSquare] -> Int -> [Bool]
+    getInRow :: Int -> FieldRow -> Int -> [Bool]
     getInRow _ [] 0 = []
     getInRow _ [] n = True : (getInRow 0 [] (n-1))
     getInRow _ _ 0  = []
@@ -233,7 +271,7 @@ collision ((x:xs):xss) ((y:ys):yss) = (x&&y) || (collision (xs:xss) (ys:yss))
 moveRows :: GameState -> Field
 moveRows game = newField
   where
-    field = playField game -- field = currentField
+    field = playField game
     newField = moveRows' field
     
     moveRows' :: Field -> Field
@@ -267,6 +305,7 @@ fullRow [] = True
 fullRow (x:xs) | (fst(x)) = fullRow xs
                | otherwise = False
 
+-- New block
 resetBlock :: GameState -> GameState
 resetBlock game = game {fallingBlock = (block,color,(2,0)),
                         playField = newField,
@@ -278,6 +317,7 @@ resetBlock game = game {fallingBlock = (block,color,(2,0)),
     newScore = updateScore game
     newField = moveRows game
 
+-- Takes gameState and if any rows are going to be cleared add that many points times 10
 updateScore :: GameState -> Int
 updateScore game = newScore
   where
@@ -290,16 +330,11 @@ updateScore game = newScore
                           | otherwise = fullRows score xs
 
 -- Checks if game is over and if it is not, clears rows that are full (if there are any)
-
-
-
-
 {-
 gameOver :: Field -> Field
 gameOver field | gameOver' field = initialField
                | otherwise = moveRows 
                where
-
                  -- Checks if the top row is full
                  gameOver' :: GameState -> Bool
                  gameOver' game = game {playField} fullRow x
@@ -366,14 +401,18 @@ event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = tryRotate game
 event (EventKey (SpecialKey KeyDown) (Down) _ _) game = tryMoveDown game
 event (EventKey (SpecialKey KeyRight)(Down) _ _) game = tryMoveRight game
 event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = tryMoveLeft game
+event (EventKey (Char 'r') (Down) _ _) game = initialGameState
 event _ game = if (checkTick (tick game)) then
 	         tryMoveDown game
 	       else
 	         increaseTick game
-
+                 
 time :: Float -> GameState -> GameState
-time _ game = game
+time _ game = increaseTick game
 
+--createVertical :: Picture -> [Picture]
+--createVertical 
+--createHorizontal :: Picture -> [Picture]
 
 --olika event
 
@@ -403,7 +442,7 @@ time _ game = game
 
 
 main = play
-       (InWindow "Tetris" (500,600) (0,0))
+       (InWindow "Tetris" (600,600) (0,0))
        black
        60
        (initialGameState)
