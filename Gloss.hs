@@ -1,16 +1,14 @@
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
-import System.IO.Unsafe
 import System.Random
 
 type Block = [[Bool]]
 type GridSquare = (Bool, Color)
 type Field = [[GridSquare]]
 type FieldRow = [GridSquare]
-type Cords = (Int,Int)
+type Coords = (Int,Int)
 
 -- Tetriminos
-
 tBlock  = [[True,True,True,False],
            [False,True,False,False],
            [False,False,False,False],
@@ -63,11 +61,10 @@ rotateBlock game = game { fallingBlock = (newBlock,color,(x,y))
 	                               [d3, c3, b3, a3],
 	                               [d4, c4, b4, a4]]
 
-data GameState = Game { fallingBlock :: (Block,Color,Cords),
+data GameState = Game { fallingBlock :: (Block,Color,Coords),
                         playField :: Field,
 			tick :: Int,
-                        scoreCounter :: Int
-                      }
+                        scoreCounter :: Int}
 
 lastRowTrue :: GameState -> GameState
 lastRowTrue game = game {playField = newField}
@@ -81,20 +78,13 @@ lastRowTrue game = game {playField = newField}
 
     c = (True,green)
 
-
-{-
-initialBlock = ([[False,False,False,False],
-                 [False,True,True,False],
-		 [False,True,False,False],
-		 [False,True,False,False]],green,(7,0))
--}
+initialField = take 20 (repeat (take 10 (repeat (False,black))))
 
 initialGameState :: GameState
-initialGameState = Game { fallingBlock = (tBlock,green,(7,1)),
+initialGameState = Game { fallingBlock = (tBlock,green,(7,0)),
                          playField = initialField,
 			 tick = 0,
-                         scoreCounter = 0
-		       }
+                         scoreCounter = 0}
 
 fallStep :: GameState -> GameState
 fallStep game = game {fallingBlock = (block, color, (x, newY))}
@@ -115,32 +105,19 @@ stepLeft game = game {fallingBlock = (block, color, (newX, y))}
     newX = x - 1
 
 placeBlock :: GameState -> GameState
-placeBlock game = game {
-                        playField = newField
-                       }
+placeBlock game = game {playField = newField}
   where
-    --newblock =
-    
     (block, color, (x,y)) = fallingBlock game
     field = playField game
 
-    replaceNth :: Int -> a -> [a] -> [a]
-    replaceNth _ _ [] = []
-    replaceNth n newVal (x:xs)
-      | n == 0 = newVal:xs
-      | otherwise = x:replaceNth (n-1) newVal xs
-
-    placeRow :: [Bool] -> [GridSquare] -> Color -> Int -> [GridSquare]
+    placeRow :: [Bool] -> FieldRow -> Color -> Int -> FieldRow
     placeRow _ [] _ _ = []
     placeRow [] ys _ _ = ys
     placeRow (x:xs) (y:ys) color 0 | x         = (True,color) : (placeRow xs ys color 0)
                                    | otherwise = y : (placeRow xs ys color 0)
-    placeRow (x:xs) (y:ys) color xc = if xc > 0 then
-                                        y : placeRow (x:xs) ys color (xc-1)
-			              else
-				        placeRow xs (y:ys) color (xc+1)
+    placeRow (x:xs) (y:ys) color xc = y : placeRow (x:xs) ys color (xc-1)
     
-    place :: (Block, Color, (Int,Int)) -> [[GridSquare]] -> [[GridSquare]]
+    place :: (Block, Color, Coords) -> Field -> Field
     place _ [] = []
     place (block,color,(xc,0)) (a:[]) =
       (placeRow (block!!0) a color xc: [])
@@ -162,8 +139,8 @@ placeBlock game = game {
 	     
     place (block,color,(xc,yc)) (x:xs) = x : place (block,color,(xc,yc-1)) xs
 
-
     newField = place (fallingBlock game) (playField game)
+
 
 -- | Render the play field with text in console
 
@@ -211,19 +188,17 @@ renderGame game = pictures [
 
     fallingblock = gridFromBlock (fallingBlock game)
 
-    gridFromBlock :: (Block,Color,Cords) -> Picture
+    gridFromBlock :: (Block,Color,Coords) -> Picture
     gridFromBlock ((a:b:c:d:xs),color,(xc,yc)) = pictures [blockRow a color (xc, yc),
                                                            blockRow b color (xc,(yc+1)),
 							   blockRow c color (xc,(yc+2)),
 							   blockRow d color (xc,(yc+3))]
 
-    blockRow :: [Bool] -> Color -> Cords -> Picture
+    blockRow :: [Bool] -> Color -> Coords -> Picture
     blockRow (x:[]) color (xc,yc) = createSquare (x,color) (xc,yc)
     blockRow (x:xs) color (xc,yc) = pictures [(createSquare (x,color) (xc,yc)), (blockRow xs color ((xc+1),yc))]
     
-    
-    
-    createSquare :: GridSquare -> Cords -> Picture
+    createSquare :: GridSquare -> Coords -> Picture
     createSquare x (c,r) = translate (fromIntegral(c*30)) (fromIntegral(-(r*30))) $ color (if (fst x) then (snd x) else (makeColorI 0 0 0 0)) $ translate (fromIntegral(-150)) (fromIntegral(300)) $ polygon [(0,0), (0,-30), (30,-30), (30,0)]
 
 
@@ -231,8 +206,8 @@ renderGame game = pictures [
 
 -- | Get the 4x4 grid from playField where the fallingBlock is going to appear next step
 
-nextBlockPos :: (Int,Int) -> Field -> Block
-nextBlockPos (xc,0) (xss) = getNextRows xc xss (4::Int) --4 because we only want the next 4 rows
+nextBlockPos :: Coords -> Field -> Block
+nextBlockPos (xc,0) ((x:xs):xss) = getNextRows xc xss (4::Int) --4 because we only want the next 4 rows
   where
     getNextRows :: Int -> Field -> Int -> Block
     getNextRows xc [] 0 = []
@@ -240,19 +215,14 @@ nextBlockPos (xc,0) (xss) = getNextRows xc xss (4::Int) --4 because we only want
     getNextRows xc _ 0 = []
     getNextRows xc (x:xs) n = (getInRow xc x 4) : (getNextRows xc xs (n-1))
 
-    getInRow :: Int -> [GridSquare] -> Int -> [Bool]
+    getInRow :: Int -> FieldRow -> Int -> [Bool]
     getInRow _ [] 0 = []
     getInRow _ [] n = True : (getInRow 0 [] (n-1))
     getInRow _ _ 0  = []
     getInRow 0 (x:xs) n  = (fst x) : getInRow 0 xs (n-1)
-    getInRow xc (x:xs) n = if xc > 0 then
-                             getInRow (xc-1) xs n
-			   else
-			     True : getInRow (xc+1) (x:xs) (n-1)
+    getInRow xc (x:xs) n = getInRow (xc-1) xs n
 
 nextBlockPos (xc,yc) ((x:xs):xss) = nextBlockPos (xc,(yc-1)) xss
-
-
 
 -- | checks collision on next step
 
@@ -261,6 +231,7 @@ collision [] [] = False
 collision ([]:xss) ([]:yss) = collision xss yss
 collision ((x:xs):xss) ((y:ys):yss) = (x&&y) || (collision (xs:xss) (ys:yss))
 
+-- Add new rows
 moveRows :: GameState -> Field
 moveRows game = newField
   where
@@ -278,6 +249,7 @@ moveRows game = newField
     addRow (-1) _ = []
     addRow n field = addRow (n-1) [(take 10 (repeat (False,black)))] ++ field
 
+-- Empties all Full Rows
 clearRows :: Field -> Field
 clearRows [] = []
 clearRows (x:xs) | row == x = clearRows xs 
@@ -288,17 +260,17 @@ clearRows (x:xs) | row == x = clearRows xs
 -- Returns the row that is full and needs to be cleared
 isCleared :: Int -> Field -> FieldRow
 isCleared _ [] = []
-isCleared yc (x:xs) | isCleared' x = x 
+isCleared yc (x:xs) | fullRow x = x 
                     | otherwise = isCleared (yc+1) xs
-                    where
-                      -- Kollar om en rad är full
-                      isCleared' :: FieldRow -> Bool
-                      isCleared' [] = True
-                      isCleared' (x:xs) | (fst(x)) = isCleared' xs
-                                        | otherwise = False
+
+-- Checks if a given row is Full
+fullRow :: FieldRow -> Bool
+fullRow [] = True
+fullRow (x:xs) | (fst(x)) = fullRow xs
+               | otherwise = False
 
 resetBlock :: GameState -> GameState
-resetBlock game = game {fallingBlock = (block,color,(2,1)), --Changed y coordinate to 1
+resetBlock game = game {fallingBlock = (block,color,(2,0)),
                         playField = newField,
                         scoreCounter = newScore
                        }
@@ -308,22 +280,16 @@ resetBlock game = game {fallingBlock = (block,color,(2,1)), --Changed y coordina
     newScore = updateScore game
     newField = moveRows game
 
-    
 updateScore :: GameState -> Int
 updateScore game = newScore
   where
     field = playField game
-    newScore = (scoreCounter game) + (rowsFull 0 field)
+    newScore = (scoreCounter game) + (fullRows 0 field)
     
-    rowsFull :: Int -> Field -> Int
-    rowsFull score [] = score
-    rowsFull score (x:xs) | rowsFull' x = rowsFull (score+10) xs
-                          | otherwise = rowsFull score xs
-    rowsFull' :: FieldRow -> Bool
-    rowsFull' [] = True
-    rowsFull' (x:xs) | (fst(x)) = rowsFull' xs
-                     | otherwise = False
-    
+    fullRows :: Int -> Field -> Int
+    fullRows score [] = score
+    fullRows score (x:xs) | fullRow x = fullRows (score+10) xs
+                          | otherwise = fullRows score xs
 
 -- Checks if game is over and if it is not, clears rows that are full (if there are any)
 
@@ -356,63 +322,28 @@ resetTick game = game {tick = 0}
 checkTick :: Int -> Bool
 checkTick n = n > 19
 
-tryRotate :: GameState -> GameState
-tryRotate game = if (collision rotatedBlock nextPosInField) then
-                   increaseTick game
-		 else
-		   rotateBlock $ increaseTick game
-		   
-		   where
-		     (rotatedBlock,_,(x,y)) = fallingBlock (rotateBlock game)
-		     nextPosInField = nextBlockPos (x,y) (playField game)
-
-tryMoveDown :: GameState -> GameState
-tryMoveDown game = if (collision fallBlock nextPosInField) then
-                     resetBlock $ placeBlock $ resetTick $ game
-                   else
-	             resetTick $ fallStep $ game
+tryMove :: GameState -> GameState
+tryMove game = if (collision fallBlock nextPosInField) then
+                 resetBlock $ placeBlock $ resetTick $ game
+	       else
+	         resetTick $ fallStep $ game
 		 
 		 where
 		   (fallBlock,_,(x,y)) = fallingBlock game
-		   nextPosInField = nextBlockPos (x,y+1) (playField game)
+		   nextPosInField = nextBlockPos (x,y) (playField game)
 
-tryMoveLeft :: GameState -> GameState
-tryMoveLeft game = if (collision fallBlock nextPosInField) then
-                     increaseTick game
-		   else
-		     increaseTick $ stepLeft game
-		     
-		     where
-		       (fallBlock,_,(x,y)) = fallingBlock game
-		       nextPosInField = take 4 (nextBlockPos (x-1,y) (playField game))
-
-tryMoveRight :: GameState -> GameState
-tryMoveRight game = if (collision fallBlock nextPosInField) then
-                      increaseTick game
-		    else
-		      increaseTick $ stepRight game
-		     
-		      where
-		        (fallBlock,_,(x,y)) = fallingBlock game
-		        nextPosInField = take 4 (nextBlockPos (x+1,y) (playField game))
 -- | detects events
 
 event :: Event -> GameState -> GameState
-event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = tryRotate game
-event (EventKey (SpecialKey KeyDown) (Down) _ _) game = tryMoveDown game
-event (EventKey (SpecialKey KeyRight)(Down) _ _) game = tryMoveRight game
-event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = tryMoveLeft game
-event (EventKey (Char 'q') (Down) _ _) game = resetGame game
+event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = rotateBlock $ increaseTick $ game
+event (EventKey (SpecialKey KeyDown) (Down) _ _) game = tryMove game
+event (EventKey (SpecialKey KeyRight) (Down) _ _) game = stepRight $ increaseTick $ game
+event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = stepLeft $ increaseTick $ game
+event (EventKey (Char 'q') (Down) _ _) game = initialGameState
 event _ game = if (checkTick (tick game)) then
-	         tryMoveDown game
+	         tryMove game
 	       else
 	         increaseTick game
-
-
-
-    
-resetGame :: GameState -> GameState
-resetGame game = initialGameState
 
 time :: Float -> GameState -> GameState
 time _ game = game
@@ -449,7 +380,7 @@ main = play
        (InWindow "Tetris" (500,600) (0,0))
        black
        60
-       initialGameState
+       (initialGameState)
        renderGame
        (event)
        (time)
