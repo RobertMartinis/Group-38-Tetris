@@ -321,10 +321,10 @@ updateScore :: GameState -> Int
 updateScore game = newScore
   where
     field = playField game
-    newScore = (scoreCounter game) + (fullRows 0 0 field)
+    newScore = (scoreCounter game) + (fullRows 0 0 field) -- Both zeroes are accumilators
     
     fullRows :: Int -> Int -> Field -> Int
-    fullRows score multiplier [] = score*multiplier
+    fullRows score multiplier [] = score*multiplier -- multiplier gives more points if more than 1 row is cleared
     fullRows score multiplier (x:xs) | fullRow x = fullRows (score+10) (multiplier+1) xs
                                      | otherwise = fullRows multiplier score xs
 
