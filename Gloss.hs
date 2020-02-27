@@ -185,23 +185,22 @@ renderGame game = pictures [
   where
     playfield = gridFromField (playField game) 0 --0 är accumulator som håller koll på y-koordinat/vilken rad
 --makeColor8 (0,0,0,0) == transparent
+    
     verticalLines = pictures (verticalLines' 0 verticalLine)
-
-    verticalLine = take 11 (repeat (color white (Line [(150,-600),(150,600)])))
 
     verticalLines' :: Int -> [Picture] -> [Picture]
     verticalLines' 11 _ = []
-    verticalLines' n (x:xs) = translate (fromIntegral(-30*n)) 0 x : verticalLines' (n+1) xs 
+    verticalLines' n (x:xs) = translate (fromIntegral(-30*n)) 0 x : verticalLines' (n+1) xs
 
+    verticalLine = take 11 (repeat (color white (Line [(150,-600),(150,600)])))
 
-    horizontalLine = take 20 (repeat (color white (Line [(-150,-300),(150,-300)])))
+    horizontalLines = pictures (horizontalLines' 0 horizontalLine)
 
     horizontalLines' :: Int -> [Picture] -> [Picture]
     horizontalLines' 20 _ = []
     horizontalLines' n (x:xs) = translate 0 (fromIntegral(30*n)) x : horizontalLines' (n+1) xs
-  
-    horizontalLines = pictures (horizontalLines' 0 horizontalLine)
 
+    horizontalLine = take 20 (repeat (color white (Line [(-150,-300),(150,-300)])))
 
     scorecounter = translate (-300) 0 (scale (0.2) (0.2) (color white (Text ("Score: " ++ (show (updateScore game))))))
 
@@ -317,17 +316,17 @@ resetBlock game = game {fallingBlock = (block,color,(2,0)),
     newScore = updateScore game
     newField = moveRows game
 
--- Takes gameState and if any rows are going to be cleared add that many points times 10
+-- Takes gameState and gives 10 points * (amount of rows cleared) per row
 updateScore :: GameState -> Int
 updateScore game = newScore
   where
     field = playField game
-    newScore = (scoreCounter game) + (fullRows 0 field)
+    newScore = (scoreCounter game) + (fullRows 0 0 field)
     
-    fullRows :: Int -> Field -> Int
-    fullRows score [] = score
-    fullRows score (x:xs) | fullRow x = fullRows (score+10) xs
-                          | otherwise = fullRows score xs
+    fullRows :: Int -> Int -> Field -> Int
+    fullRows score multiplier [] = score*multiplier
+    fullRows score multiplier (x:xs) | fullRow x = fullRows (score+10) (multiplier+1) xs
+                                     | otherwise = fullRows multiplier score xs
 
 -- Checks if game is over and if it is not, clears rows that are full (if there are any)
 {-
