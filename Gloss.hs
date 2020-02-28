@@ -1,3 +1,4 @@
+
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
 import System.Random
@@ -414,6 +415,17 @@ tryMoveRight game = if (collision fallBlock nextPosInField) then
 		      where
 		        (fallBlock,_,(x,y)) = fallingBlock game
 		        nextPosInField = take 4 (nextBlockPos (x+1,y) (playField game))
+
+
+-- Swaps block
+swapBlock :: GameState -> GameState
+swapBlock game = game {fallingBlock = newBlock,
+                      nextBlock = newBlock2
+                      }
+                 where
+                   newBlock = nextBlock game
+                   newBlock2 = randomBlock (seed game)
+
 -- | detects events
 
 event :: Event -> GameState -> GameState
@@ -421,7 +433,8 @@ event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = increaseSeed $ tryRotate
 event (EventKey (SpecialKey KeyDown) (Down) _ _) game = increaseSeed $ tryMoveDown game
 event (EventKey (SpecialKey KeyRight)(Down) _ _) game = increaseSeed $ tryMoveRight game
 event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = increaseSeed $ tryMoveLeft game
-event (EventKey (Char 'r') (Down) _ _) game = initialGameState
+event (EventKey (Char 'r') (Down) _ _) game = increaseSeed $ initialGameState
+event (EventKey (Char 's') (Down) _ _) game = swapBlock game
 event _ game = if (checkTick (tick game)) then
 	         tryMoveDown game
 	       else
@@ -472,3 +485,4 @@ main = play
        renderGame
        (event)
        (time)
+
