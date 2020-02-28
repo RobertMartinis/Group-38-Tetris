@@ -8,6 +8,7 @@ type GridSquare = (Bool, Color)
 type Field = [[GridSquare]]
 type FieldRow = [GridSquare]
 type Coords = (Int,Int)
+type FallBlock = (Block,Color,(Int,Int))
 
 {-
 randomBlock :: [Block] -> Block
@@ -20,50 +21,54 @@ randomBlock l = do
     randomBlock' r (x:xs) = randomBlock' (r-1) xs
 -}
 
-blockList = [tBlock,iBlock,oBlock,jBlock,lBlock,sBlock,zBlock]
-
+{-
 randBlock = randBlock' [tBlock,iBlock,oBlock,jBlock,lBlock,sBlock,zBlock]
   where
     randBlock' :: [a] -> IO a
     randBlock' list = do
       r <- randomRIO (0, length list - 1)
       return $ list !! r
-
+-}
+randomBlock :: Int -> FallBlock
+randomBlock seed = blockList !! (mod (seed*2) 7 )
+  where
+    blockList = [tBlock,iBlock,oBlock,jBlock,lBlock,sBlock,zBlock]
+    
 -- Tetriminos
-tBlock  = [[True,True,True,False],
+tBlock  =  ([[False,False,False,False],
+	   [True,True,True,False],
            [False,True,False,False],
-           [False,False,False,False],
-           [False,False,False,False]]
+           [False,False,False,False]],makeColorI 0 255 255 255,(0,3))
 
-iBlock = [[True,True,True,True],
-          [False,False,False,False],
-          [False,False,False,False],
-          [False,False,False,False]]
+iBlock = ([[False,False,True,False],
+                [False,False,True,False],
+          [False,False,True,False],
+          [False,False,True,False]],blue,(0,3))
 
-oBlock = [[False,False,False,False],
+oBlock = ([[False,False,False,False],
           [False,True,True,False],
           [False,True,True,False],
-          [False,False,False,False]]
+          [False,False,False,False]],yellow,(0,3))
 
-jBlock = [[False,True,False,False],
+lBlock = ([[False,True,False,False],
           [False,True,False,False],
-          [True,True,False,False],
-          [False,False,False,False]]
-
-lBlock = [[True,False,False,False],
-          [True,False,False,False],
-          [True,True,False,False],
-          [False,False,False,False]]
-
-sBlock = [[False,True,True,False],
-          [True,True,False,False],
-          [False,False,False,False],
-          [False,False,False,False]]
-
-zBlock = [[True,True,False,False],
           [False,True,True,False],
-          [False,False,False,False],
-          [False,False,False,False]]
+          [False,False,False,False]],dark blue, (0,3))
+
+jBlock = ([[False,False,True,False],
+          [False,False,True,False],
+          [False,True,True,False],
+          [False,False,False,False]],orange,(0,3))
+
+zBlock = ([[False,False,True,False],
+          [False,True,True,False],
+          [False,True,False,False],
+          [False,False,False,False]],red,(0,3))
+
+sBlock = ([[False,True,False,False],
+          [False,True,True,False],
+          [False,False,True,False],
+          [False,False,False,False]],green,(0,3))
 
 
 rotateBlock :: GameState -> GameState
@@ -85,15 +90,19 @@ rotateBlock game = game { fallingBlock = (newBlock,color,(x,y))
 data GameState = Game { fallingBlock :: (Block,Color,Coords),
                         playField :: Field,
 			tick :: Int,
-                        scoreCounter :: Int}
+                        scoreCounter :: Int,
+			seed :: Int
+		      }
 
 initialField = take 20 (repeat (take 10 (repeat (False,black))))
 
 initialGameState :: GameState
-initialGameState = Game { fallingBlock = (tBlock,green,(7,0)),
+initialGameState = Game { fallingBlock = tBlock,
                          playField = initialField,
 			 tick = 0,
-                         scoreCounter = 0}
+                         scoreCounter = 0,
+			 seed = 0
+			}
 
 fallStep :: GameState -> GameState
 fallStep game = game {fallingBlock = (block, color, (x, newY))}
@@ -306,7 +315,7 @@ fullRow (x:xs) | (fst(x)) = fullRow xs
 
 -- New block
 resetBlock :: GameState -> GameState
-resetBlock game = game {fallingBlock = (block,color,(2,0)),
+resetBlock game = game {fallingBlock = randomBlock (seed game),    --(block,color,(2,0)),
                         playField = newField,
                         scoreCounter = newScore
                        }
@@ -347,6 +356,11 @@ increaseTick :: GameState -> GameState
 increaseTick game = game {tick = (n+1)}
   where
     n = tick game
+
+increaseSeed :: GameState -> GameState
+increaseSeed game = game {seed = (n+1)}
+  where
+    n = seed game
 
 resetTick :: GameState -> GameState
 resetTick game = game {tick = 0}
@@ -396,10 +410,10 @@ tryMoveRight game = if (collision fallBlock nextPosInField) then
 -- | detects events
 
 event :: Event -> GameState -> GameState
-event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = tryRotate game
-event (EventKey (SpecialKey KeyDown) (Down) _ _) game = tryMoveDown game
-event (EventKey (SpecialKey KeyRight)(Down) _ _) game = tryMoveRight game
-event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = tryMoveLeft game
+event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = increaseSeed $ tryRotate game
+event (EventKey (SpecialKey KeyDown) (Down) _ _) game = increaseSeed $ tryMoveDown game
+event (EventKey (SpecialKey KeyRight)(Down) _ _) game = increaseSeed $ tryMoveRight game
+event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = increaseSeed $ tryMoveLeft game
 event (EventKey (Char 'r') (Down) _ _) game = initialGameState
 event _ game = if (checkTick (tick game)) then
 	         tryMoveDown game
@@ -407,7 +421,7 @@ event _ game = if (checkTick (tick game)) then
 	         increaseTick game
                  
 time :: Float -> GameState -> GameState
-time _ game = increaseTick game
+time _ game = game
 
 --createVertical :: Picture -> [Picture]
 --createVertical 
@@ -441,7 +455,7 @@ time _ game = increaseTick game
 
 
 main = play
-       (InWindow "Tetris" (600,600) (0,0))
+       FullScreen--(InWindow "Tetris" (600,600) (0,0))
        black
        60
        (initialGameState)
