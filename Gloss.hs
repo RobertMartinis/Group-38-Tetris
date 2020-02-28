@@ -290,9 +290,9 @@ moveRows game = game { playField = newField
 
     -- VARIANT: length xs
     
-rowsMissing :: Int -> Field -> Int
-rowsMissing n [] = n
-rowsMissing n (x:xs) = rowsMissing (n-1) xs
+    rowsMissing :: Int -> Field -> Int
+    rowsMissing n [] = n
+    rowsMissing n (x:xs) = rowsMissing (n-1) xs
     
     {- addRow n Field
     Adds n amounts of empty rows with 10 elements to the top of a Field
@@ -310,9 +310,9 @@ rowsMissing n (x:xs) = rowsMissing (n-1) xs
 
     -- VARIANT : n
     
-addRow :: Int -> Field -> Field
-addRow (-1) _ = []
-addRow n field = addRow (n-1) [(take 10 (repeat (False,black)))] ++ field
+    addRow :: Int -> Field -> Field
+    addRow (-1) _ = []
+    addRow n field = addRow (n-1) [(take 10 (repeat (False,black)))] ++ field
 
 {- clearRows (x:xs)
 Clears all rows where the first element of every tuple in a row is True
