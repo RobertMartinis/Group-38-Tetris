@@ -38,37 +38,37 @@ randomBlock seed = blockList !! (mod (seed*2) 7 )
 tBlock  =  ([[False,False,False,False],
 	   [True,True,True,False],
            [False,True,False,False],
-           [False,False,False,False]],makeColorI 0 255 255 255,(0,3))
+           [False,False,False,False]],makeColorI 255 0 255 255,(3,0))
 
 iBlock = ([[False,False,True,False],
                 [False,False,True,False],
           [False,False,True,False],
-          [False,False,True,False]],blue,(0,3))
+          [False,False,True,False]],blue,(3,0))
 
 oBlock = ([[False,False,False,False],
           [False,True,True,False],
           [False,True,True,False],
-          [False,False,False,False]],yellow,(0,3))
+          [False,False,False,False]],yellow,(3,0))
 
 lBlock = ([[False,True,False,False],
           [False,True,False,False],
           [False,True,True,False],
-          [False,False,False,False]],dark blue, (0,3))
+          [False,False,False,False]],dark blue, (3,0))
 
 jBlock = ([[False,False,True,False],
           [False,False,True,False],
           [False,True,True,False],
-          [False,False,False,False]],orange,(0,3))
+          [False,False,False,False]],orange,(3,0))
 
 zBlock = ([[False,False,True,False],
           [False,True,True,False],
           [False,True,False,False],
-          [False,False,False,False]],red,(0,3))
+          [False,False,False,False]],red,(3,0))
 
 sBlock = ([[False,True,False,False],
           [False,True,True,False],
           [False,False,True,False],
-          [False,False,False,False]],green,(0,3))
+          [False,False,False,False]],green,(3,0))
 
 
 rotateBlock :: GameState -> GameState
@@ -462,6 +462,3 @@ main = play
        renderGame
        (event)
        (time)
-
-
-testcollision = collision (fst' (fallingBlock initialGameState))
