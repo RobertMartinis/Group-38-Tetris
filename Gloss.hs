@@ -10,8 +10,6 @@ type FieldRow = [GridSquare]
 type Coords = (Int,Int)
 type FallBlock = (Block,Color,Coords)
 
-test = [[(True,green),(False,black)],[(False,black),(False,black)]]
-
 randomBlock :: Int -> FallBlock
 randomBlock seed = blockList !! (mod (seed*2) 7 )
   where
@@ -234,9 +232,6 @@ renderGame game = pictures [ verticalLines,
     createSquare :: GridSquare -> Coords -> Picture
     createSquare x (c,r) = translate (fromIntegral(c*30)) (fromIntegral(-(r*30))) $ color (if (fst x) then (snd x) else (makeColorI 0 0 0 0)) $ translate (fromIntegral(-150)) (fromIntegral(300)) $ polygon [(0,0), (0,-30), (30,-30), (30,0)]
 
-
-
-
 -- | Get the 4x4 grid from playField where the fallingBlock is going to appear next step
 
 nextBlockPos :: Coords -> Field -> Block
@@ -260,8 +255,6 @@ nextBlockPos (xc,0) (xss) = getNextRows xc xss (4::Int) --4 because we only want
 
 nextBlockPos (xc,yc) ((x:xs):xss) = nextBlockPos (xc,(yc-1)) xss
 
-
-
 -- | checks collision on next step
 
 collision :: Block -> Block -> Bool  -- ^ first Block is from fallingBlock, second is from nextBlockPos
@@ -271,12 +264,9 @@ collision ((x:xs):xss) ((y:ys):yss) = (x&&y) || (collision (xs:xss) (ys:yss))
 
 -- Add new rows
 moveRows :: GameState -> GameState
-moveRows game = game { playField = newField
+moveRows game = game { playField = moveRows' $ playField game
                      }
   where
-    field = playField game
-    newField = moveRows' field
-    
     moveRows' :: Field -> Field
     moveRows' field = addRow (rowsMissing 20 (clearRows field)) (clearRows field)
 
@@ -314,40 +304,41 @@ moveRows game = game { playField = newField
     addRow (-1) _ = []
     addRow n field = addRow (n-1) [(take 10 (repeat (False,black)))] ++ field
 
-{- clearRows (x:xs)
-Clears all rows where the first element of every tuple in a row is True
-PRE: Not all tuples are True
-RETURNS: Field with n amount of less FieldRow
-EXAMPLES: stringify (clearRows [[(True,black),(True,black)],[(False,black),(True,black)]]) ==
-          _ x
-          stringify (clearRows [[(True,black),(True,black)],[(False,black),(False,green)],[(True,black),(True,black)]]) ==
-          _ _
--}
+    {- clearRows (x:xs)
+    Clears all rows where the first element of every tuple in a row is True
+    PRE: Not all tuples are True
+    RETURNS: Field with n amount of less FieldRow
+    EXAMPLES: stringify (clearRows [[(True,black),(True,black)],[(False,black),(True,black)]]) ==
+              _ x
+              stringify (clearRows [[(True,black),(True,black)],[(False,black),(False,green)],[(True,black),(True,black)]]) ==
+              _ _
+    -}
 
--- VARIANT: length xs
+    -- VARIANT: length xs
 
-clearRows :: Field -> Field
-clearRows [] = []
-clearRows (x:xs) | row == x = clearRows xs 
+    clearRows :: Field -> Field
+    clearRows [] = []
+    clearRows (x:xs) | row == x = clearRows xs 
                  | otherwise = x : clearRows xs
                   where
                    row = isCleared (x:xs)
 
-{- isCleared (x:xs)
-Returns the first row that has only True
-RETURNS: First FieldRow in a Field that has only True elements
-EXAMPLES: isCleared [[(True,black),(False,black)],[(True,black),(True,black)]] ==
-                    [(True,RGBA 0.0 0.0 0.0 1.0),(True,RGBA 0.0 0.0 0.0 1.0)]
-          isCleared [[(True,black),(True,black)],[(True,green),(True,green)]] ==
-                    [(True,RGBA 0.0 0.0 0.0 1.0),(True,RGBA 0.0 0.0 0.0 1.0)]
-          isCleared [] = []
--}
+    {- isCleared (x:xs)
+    Returns the first row that has only True
+    RETURNS: First FieldRow in a Field that has only True elements
+    EXAMPLES: isCleared [[(True,black),(False,black)],[(True,black),(True,black)]] ==
+                        [(True,RGBA 0.0 0.0 0.0 1.0),(True,RGBA 0.0 0.0 0.0 1.0)]
+              isCleared [[(True,black),(True,black)],[(True,green),(True,green)]] ==
+                        [(True,RGBA 0.0 0.0 0.0 1.0),(True,RGBA 0.0 0.0 0.0 1.0)]
+              isCleared [] ==
+                        []
+    -}
 
--- VARIANT: length xs
+    -- VARIANT: length xs
 
-isCleared :: Field -> FieldRow
-isCleared [] = []
-isCleared (x:xs) | fullRow x = x 
+    isCleared :: Field -> FieldRow
+    isCleared [] = []
+    isCleared (x:xs) | fullRow x = x 
                  | otherwise = isCleared xs
 
 {- fullRow (x:xs)
