@@ -1,4 +1,3 @@
-
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Interact
 import System.Random
@@ -11,25 +10,6 @@ type FieldRow = [GridSquare]
 type Coords = (Int,Int)
 type FallBlock = (Block,Color,Coords)
 
-{-
-randomBlock :: [Block] -> Block
-randomBlock l = do
-  r <- show(getLine(randomRIO (0,7)))
-  randomBlock' r l
-  where
-    randomBlock' :: Int -> [Block] -> Block
-    randomBlock' 0 (x:xs) = x
-    randomBlock' r (x:xs) = randomBlock' (r-1) xs
--}
-
-{-
-randBlock = randBlock' [tBlock,iBlock,oBlock,jBlock,lBlock,sBlock,zBlock]
-  where
-    randBlock' :: [a] -> IO a
-    randBlock' list = do
-      r <- randomRIO (0, length list - 1)
-      return $ list !! r
--}
 randomBlock :: Int -> FallBlock
 randomBlock seed = blockList !! (mod (seed*2) 7 )
   where
@@ -110,26 +90,28 @@ initialGameState = Game { fallingBlock = tBlock,
 			}
 
 fallStep :: GameState -> GameState
-fallStep game = game {fallingBlock = (block, color, (x, newY))}
+fallStep game = game { fallingBlock = (block, color, (x, newY))
+                     }
   where
     (block,color,(x,y)) = fallingBlock game
     newY = y + 1
     
 stepRight :: GameState -> GameState
-stepRight game = game {fallingBlock = (block, color, (newX, y))}
+stepRight game = game { fallingBlock = (block, color, (newX, y))
+                      }
   where
     (block,color,(x,y)) = fallingBlock game
     newX = x + 1
     
 stepLeft :: GameState -> GameState
-stepLeft game = game {fallingBlock = (block, color, (newX, y))}
+stepLeft game = game { fallingBlock = (block, color, (newX, y))
+                     }
   where
     (block,color,(x,y)) = fallingBlock game
     newX = x - 1
 
 placeBlock :: GameState -> GameState
-placeBlock game = game {
-                        playField = newField
+placeBlock game = game { playField = newField
                        }
   where
     (block, color, (x,y)) = fallingBlock game
@@ -189,13 +171,12 @@ trd' (_,_,a) = a
 -- | Render gamestate with Gloss
 
 renderGame :: GameState -> Picture
-renderGame game = pictures [
-                            verticalLines,
-                            horizontalLines,
-                            scorecounter,
-         		    fallingblock,
-			    nextblock,
-                            playfield
+renderGame game = pictures [ verticalLines,
+                             horizontalLines,
+                             scorecounter,
+         		     fallingblock,
+			     nextblock,
+                             playfield
 		           ]
   where
     playfield = gridFromField (playField game) 0 --0 är accumulator som håller koll på y-koordinat/vilken rad
@@ -207,15 +188,15 @@ renderGame game = pictures [
     verticalLines' 11 _ = []
     verticalLines' n (x:xs) = translate (fromIntegral(-30*n)) 0 x : verticalLines' (n+1) xs
 
-    verticalLine = take 11 (repeat (color white (Line [(150,-600),(150,600)])))
+    verticalLine = take 11 (repeat (color white (Line [(150,-300),(150,300)])))
 
     horizontalLines = pictures (horizontalLines' 0 horizontalLine)
 
     horizontalLines' :: Int -> [Picture] -> [Picture]
-    horizontalLines' 20 _ = []
+    horizontalLines' 21 _ = []
     horizontalLines' n (x:xs) = translate 0 (fromIntegral(30*n)) x : horizontalLines' (n+1) xs
 
-    horizontalLine = take 20 (repeat (color white (Line [(-150,-300),(150,-300)])))
+    horizontalLine = take 21 (repeat (color white (Line [(-150,-300),(150,-300)])))
 
     scorecounter = translate (-300) 0 (scale (0.2) (0.2) (color white (Text ("Score: " ++ (show (updateScore game))))))
 
@@ -287,8 +268,9 @@ collision ([]:xss) ([]:yss) = collision xss yss
 collision ((x:xs):xss) ((y:ys):yss) = (x&&y) || (collision (xs:xss) (ys:yss))
 
 -- Add new rows
-moveRows :: GameState -> Field
-moveRows game = newField
+moveRows :: GameState -> GameState
+moveRows game = game { playField = newField
+                     }
   where
     field = playField game
     newField = moveRows' field
@@ -327,8 +309,7 @@ fullRow (x:xs) | (fst(x)) = fullRow xs
 -- New block
 resetBlock :: GameState -> GameState
 resetBlock game = game { fallingBlock = nextBlock game,
-                         nextBlock = randomBlock (seed game),    --(block,color,(2,0)),
-                         playField = newField,
+                         nextBlock = randomBlock (seed game),
                          scoreCounter = newScore,
                          allowReset = True
                        }
@@ -336,9 +317,8 @@ resetBlock game = game { fallingBlock = nextBlock game,
     (block,color,(x,_)) = fallingBlock game
     field = playField game
     newScore = updateScore game
-    newField = moveRows game
 
--- Takes gameState and gives 10 points * (amount of rows cleared) per row
+-- Takes gameState as an input and gives 10 points * (amount of rows cleared) per row
 updateScore :: GameState -> Int
 updateScore game = newScore
   where
@@ -350,21 +330,6 @@ updateScore game = newScore
     fullRows score multiplier (x:xs) | fullRow x = fullRows (score+10) (multiplier+1) xs
                                      | otherwise = fullRows multiplier score xs
 
--- Checks if game is over and if it is not, clears rows that are full (if there are any)
-{-
-gameOver :: Field -> Field
-gameOver field | gameOver' field = initialField
-               | otherwise = moveRows 
-               where
-                 -- Checks if the top row is full
-                 gameOver' :: GameState -> Bool
-                 gameOver' game = game {playField} fullRow x
-                 -- Checks if a row has a Full block
-                 fullRow :: [GridSquare] -> Bool
-                 fullRow [] = False
-                 fullRow ((bool,_):xs) | bool == True = True
-                                       | otherwise = fullRow xs
--}
 increaseTick :: GameState -> GameState
 increaseTick game = game {tick = (n+1)}
   where
@@ -392,8 +357,8 @@ tryRotate game = if (collision rotatedBlock nextPosInField) then
 		     nextPosInField = nextBlockPos (x,y) (playField game)
 
 tryMoveDown :: GameState -> GameState
-tryMoveDown game = if (collision fallBlock nextPosInField) then
-                     resetBlock $ placeBlock $ resetTick $ game
+tryMoveDown game = if (collision fallBlock nextPosInField) then do
+                     moveRows $ resetBlock $ placeBlock $ resetTick $ game
                    else
 	             resetTick $ fallStep $ game
 		 
@@ -402,7 +367,7 @@ tryMoveDown game = if (collision fallBlock nextPosInField) then
 		   nextPosInField = nextBlockPos (x,y+1) (playField game)
 
 tryMoveLeft :: GameState -> GameState
-tryMoveLeft game = if (collision fallBlock nextPosInField) then
+tryMoveLeft game = if (collision fallBlock nextPosInField) then 
                      increaseTick game
 		   else
 		     increaseTick $ stepLeft game
@@ -421,8 +386,7 @@ tryMoveRight game = if (collision fallBlock nextPosInField) then
 		        (fallBlock,_,(x,y)) = fallingBlock game
 		        nextPosInField = take 4 (nextBlockPos (x+1,y) (playField game))
 
-
--- Swaps block
+-- Swaps current block with next block
 swapBlock :: GameState -> GameState
 swapBlock game = game {fallingBlock = newBlock,
                       nextBlock = newBlock2,
@@ -433,7 +397,6 @@ swapBlock game = game {fallingBlock = newBlock,
                    newBlock2 = randomBlock (seed game)
 
 -- | detects events
-
 event :: Event -> GameState -> GameState
 event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = increaseSeed $ tryRotate game
 event (EventKey (SpecialKey KeyDown) (Down) _ _) game = increaseSeed $ tryMoveDown game
@@ -456,37 +419,6 @@ time _ game = if (checkTick (tick game)) then
 	       else
 	         increaseTick game
 
---createVertical :: Picture -> [Picture]
---createVertical 
---createHorizontal :: Picture -> [Picture]
-
---olika event
-
---Tick --om inget trycks ned
-  --increaseTick
-  --collision
-    --fallStep
-    --
-    --placeBlock
-    --
-    --resetTick
-
---DownButton
-  --collision
-    --fallStep
-    --
-    --placeBlock
-    --
-    --resetTick
-
---UpButton
-  --rotateBlock 
-
---Space
-  --fallStep tills collision True, sen placeBlock
-
-
-
 main = play
        FullScreen--(InWindow "Tetris" (600,600) (0,0))
        black
@@ -495,4 +427,3 @@ main = play
        renderGame
        (event)
        (time)
-
