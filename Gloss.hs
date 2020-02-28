@@ -8,7 +8,7 @@ type GridSquare = (Bool, Color)
 type Field = [[GridSquare]]
 type FieldRow = [GridSquare]
 type Coords = (Int,Int)
-type FallBlock = (Block,Color,(Int,Int))
+type FallBlock = (Block,Color,Coords)
 
 {-
 randomBlock :: [Block] -> Block
@@ -41,9 +41,9 @@ tBlock  =  ([[False,False,False,False],
            [False,False,False,False]],makeColorI 255 0 255 255,(3,0))
 
 iBlock = ([[False,False,True,False],
-                [False,False,True,False],
           [False,False,True,False],
-          [False,False,True,False]],blue,(3,0))
+          [False,False,True,False],
+          [False,False,True,False]],makeColorI 0 100 255 255,(3,0))
 
 oBlock = ([[False,False,False,False],
           [False,True,True,False],
@@ -87,7 +87,8 @@ rotateBlock game = game { fallingBlock = (newBlock,color,(x,y))
 	                               [d3, c3, b3, a3],
 	                               [d4, c4, b4, a4]]
 
-data GameState = Game { fallingBlock :: (Block,Color,Coords),
+data GameState = Game { fallingBlock :: FallBlock,
+			nextBlock :: FallBlock,
                         playField :: Field,
 			tick :: Int,
                         scoreCounter :: Int,
@@ -98,10 +99,11 @@ initialField = take 20 (repeat (take 10 (repeat (False,black))))
 
 initialGameState :: GameState
 initialGameState = Game { fallingBlock = tBlock,
-                         playField = initialField,
-			 tick = 0,
-                         scoreCounter = 0,
-			 seed = 0
+                          nextBlock = lBlock,
+                          playField = initialField,
+			  tick = 0,
+                          scoreCounter = 0,
+			  seed = 0
 			}
 
 fallStep :: GameState -> GameState
@@ -189,6 +191,7 @@ renderGame game = pictures [
                             horizontalLines,
                             scorecounter,
          		    fallingblock,
+			    nextblock,
                             playfield
 		           ]
   where
@@ -228,6 +231,9 @@ renderGame game = pictures [
 				       ]
 
     fallingblock = gridFromBlock (fallingBlock game)
+
+    nextblock = gridFromBlock (nextBlockGrid,nextBlockColor,(13,0))
+    (nextBlockGrid,nextBlockColor,_) = nextBlock game
 
     gridFromBlock :: (Block,Color,Coords) -> Picture
     gridFromBlock ((a:b:c:d:xs),color,(xc,yc)) = pictures [blockRow a color (xc, yc),
@@ -315,9 +321,10 @@ fullRow (x:xs) | (fst(x)) = fullRow xs
 
 -- New block
 resetBlock :: GameState -> GameState
-resetBlock game = game {fallingBlock = randomBlock (seed game),    --(block,color,(2,0)),
-                        playField = newField,
-                        scoreCounter = newScore
+resetBlock game = game { fallingBlock = nextBlock game,
+                         nextBlock = randomBlock (seed game),    --(block,color,(2,0)),
+                         playField = newField,
+                         scoreCounter = newScore
                        }
   where
     (block,color,(x,_)) = fallingBlock game
@@ -421,7 +428,10 @@ event _ game = if (checkTick (tick game)) then
 	         increaseTick game
                  
 time :: Float -> GameState -> GameState
-time _ game = game
+time _ game = if (checkTick (tick game)) then
+	         tryMoveDown game
+	       else
+	         increaseTick game
 
 --createVertical :: Picture -> [Picture]
 --createVertical 
