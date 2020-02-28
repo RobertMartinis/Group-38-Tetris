@@ -93,7 +93,8 @@ data GameState = Game { fallingBlock :: FallBlock,
                         playField :: Field,
 			tick :: Int,
                         scoreCounter :: Int,
-			seed :: Int
+			seed :: Int,
+                        allowReset :: Bool
 		      }
 
 initialField = take 20 (repeat (take 10 (repeat (False,black))))
@@ -104,7 +105,8 @@ initialGameState = Game { fallingBlock = tBlock,
                           playField = initialField,
 			  tick = 0,
                           scoreCounter = 0,
-			  seed = 0
+			  seed = 0,
+                          allowReset = True
 			}
 
 fallStep :: GameState -> GameState
@@ -275,6 +277,8 @@ nextBlockPos (xc,0) (xss) = getNextRows xc xss (4::Int) --4 because we only want
 
 nextBlockPos (xc,yc) ((x:xs):xss) = nextBlockPos (xc,(yc-1)) xss
 
+
+
 -- | checks collision on next step
 
 collision :: Block -> Block -> Bool  -- ^ first Block is from fallingBlock, second is from nextBlockPos
@@ -325,7 +329,8 @@ resetBlock :: GameState -> GameState
 resetBlock game = game { fallingBlock = nextBlock game,
                          nextBlock = randomBlock (seed game),    --(block,color,(2,0)),
                          playField = newField,
-                         scoreCounter = newScore
+                         scoreCounter = newScore,
+                         allowReset = True
                        }
   where
     (block,color,(x,_)) = fallingBlock game
@@ -420,7 +425,8 @@ tryMoveRight game = if (collision fallBlock nextPosInField) then
 -- Swaps block
 swapBlock :: GameState -> GameState
 swapBlock game = game {fallingBlock = newBlock,
-                      nextBlock = newBlock2
+                      nextBlock = newBlock2,
+                      allowReset = False
                       }
                  where
                    newBlock = nextBlock game
@@ -434,7 +440,11 @@ event (EventKey (SpecialKey KeyDown) (Down) _ _) game = increaseSeed $ tryMoveDo
 event (EventKey (SpecialKey KeyRight)(Down) _ _) game = increaseSeed $ tryMoveRight game
 event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = increaseSeed $ tryMoveLeft game
 event (EventKey (Char 'r') (Down) _ _) game = increaseSeed $ initialGameState
-event (EventKey (Char 's') (Down) _ _) game = swapBlock game
+event (EventKey (Char 's') (Down) _ _) game = if allowReset game then
+                                              swapBlock game
+                                              else
+                                              increaseTick game
+
 event _ game = if (checkTick (tick game)) then
 	         tryMoveDown game
 	       else
