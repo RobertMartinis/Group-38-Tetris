@@ -10,6 +10,8 @@ type FieldRow = [GridSquare]
 type Coords = (Int,Int)
 type FallBlock = (Block,Color,Coords)
 
+test = [[(True,green),(False,black)],[(False,black),(False,black)]]
+
 randomBlock :: Int -> FallBlock
 randomBlock seed = blockList !! (mod (seed*2) 7 )
   where
@@ -277,30 +279,86 @@ moveRows game = game { playField = newField
     
     moveRows' :: Field -> Field
     moveRows' field = addRow (rowsMissing 20 (clearRows field)) (clearRows field)
-    -- Checks how many rows are missing
-    rowsMissing :: Int -> Field -> Int
-    rowsMissing n [] = n
-    rowsMissing n (x:xs) = rowsMissing (n-1) xs
-    -- Adds n amount of rows 
-    addRow :: Int -> Field -> Field
-    addRow (-1) _ = []
-    addRow n field = addRow (n-1) [(take 10 (repeat (False,black)))] ++ field
 
--- Empties all Full Rows
+    {- rowsMissing n (x:xs)
+    Checks how many rows are missing out of n rows
+    RETURNS: an Int representing the amount of missing rows from a Field
+    EXAMPLES: rowsMissing 10 [[(True,black)],[(True,black),(False,green)]] == 8
+              rowsMissing 20 [[(True,black)]] == 19
+              rowsMissing 0 [[(True,black)],[(True,black),(False,green)]] == -2
+    -}
+
+    -- VARIANT: length xs
+    
+rowsMissing :: Int -> Field -> Int
+rowsMissing n [] = n
+rowsMissing n (x:xs) = rowsMissing (n-1) xs
+    
+    {- addRow n Field
+    Adds n amounts of empty rows with 10 elements to the top of a Field
+    RETURNS: Field with n amounts of fieldRow
+    EXAMPLES: stringify (addRow 2 [[(True,green),(False,black)],[(False,black),(False,black)]]) ==
+                   _ _ _ _ _ _ _ _ _ _
+                   _ _ _ _ _ _ _ _ _ _
+                   x _
+                   _ _
+              stringify (addRow 3  [[]]) ==
+                   _ _ _ _ _ _ _ _ _ _
+                   _ _ _ _ _ _ _ _ _ _
+                   _ _ _ _ _ _ _ _ _ _
+    -}
+
+    -- VARIANT : n
+    
+addRow :: Int -> Field -> Field
+addRow (-1) _ = []
+addRow n field = addRow (n-1) [(take 10 (repeat (False,black)))] ++ field
+
+{- clearRows (x:xs)
+Clears all rows where the first element of every tuple in a row is True
+PRE: Not all tuples are True
+RETURNS: Field with n amount of less FieldRow
+EXAMPLES: stringify (clearRows [[(True,black),(True,black)],[(False,black),(True,black)]]) ==
+          _ x
+          stringify (clearRows [[(True,black),(True,black)],[(False,black),(False,green)],[(True,black),(True,black)]]) ==
+          _ _
+-}
+
+-- VARIANT: length xs
+
 clearRows :: Field -> Field
 clearRows [] = []
 clearRows (x:xs) | row == x = clearRows xs 
                  | otherwise = x : clearRows xs
                   where
-                   row = (isCleared 0 (x:xs))
+                   row = isCleared (x:xs)
 
--- Returns the row that is full and needs to be cleared
-isCleared :: Int -> Field -> FieldRow
-isCleared _ [] = []
-isCleared yc (x:xs) | fullRow x = x 
-                    | otherwise = isCleared (yc+1) xs
+{- isCleared (x:xs)
+Returns the first row that has only True
+RETURNS: First FieldRow in a Field that has only True elements
+EXAMPLES: isCleared [[(True,black),(False,black)],[(True,black),(True,black)]] ==
+                    [(True,RGBA 0.0 0.0 0.0 1.0),(True,RGBA 0.0 0.0 0.0 1.0)]
+          isCleared [[(True,black),(True,black)],[(True,green),(True,green)]] ==
+                    [(True,RGBA 0.0 0.0 0.0 1.0),(True,RGBA 0.0 0.0 0.0 1.0)]
+          isCleared [] = []
+-}
 
--- Checks if a given row is Full
+-- VARIANT: length xs
+
+isCleared :: Field -> FieldRow
+isCleared [] = []
+isCleared (x:xs) | fullRow x = x 
+                 | otherwise = isCleared xs
+
+{- fullRow (x:xs)
+Checks if a row has only True elements
+RETURNS: True if all elements in a FieldRow is True or False if 1 or more element is False
+EXAMPLES: fullRow [(True,black),(False,black)] == False
+          fullRow [(True,black),(True,black)] == True
+-}
+
+-- VARIANT: length xs
+
 fullRow :: FieldRow -> Bool
 fullRow [] = True
 fullRow (x:xs) | (fst(x)) = fullRow xs
