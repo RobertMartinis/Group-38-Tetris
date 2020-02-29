@@ -11,45 +11,45 @@ type Coords = (Int,Int)
 type FallBlock = (Block,Color,Coords)
 
 randomBlock :: Int -> FallBlock
-randomBlock seed = blockList !! (mod (seed*2) 7 )
+randomBlock seed = blockList !! (mod (seed*2) 7)
   where
     blockList = [tBlock,iBlock,oBlock,jBlock,lBlock,sBlock,zBlock]
     
 -- Tetriminos
 tBlock  =  ([[False,False,False,False],
-	   [True,True,True,False],
-           [False,True,False,False],
-           [False,False,False,False]],makeColorI 255 0 255 255,(3,0))
+	     [True,True,True,False],
+             [False,True,False,False],
+             [False,False,False,False]],makeColorI 255 0 255 255,(3,0))
 
 iBlock = ([[False,False,True,False],
-          [False,False,True,False],
-          [False,False,True,False],
-          [False,False,True,False]],makeColorI 0 100 255 255,(3,0))
+           [False,False,True,False],
+           [False,False,True,False],
+           [False,False,True,False]],makeColorI 0 100 255 255,(3,0))
 
 oBlock = ([[False,False,False,False],
-          [False,True,True,False],
-          [False,True,True,False],
-          [False,False,False,False]],yellow,(3,0))
+           [False,True,True,False],
+           [False,True,True,False],
+           [False,False,False,False]],yellow,(3,0))
 
 lBlock = ([[False,True,False,False],
-          [False,True,False,False],
-          [False,True,True,False],
-          [False,False,False,False]],dark blue, (3,0))
+           [False,True,False,False],
+           [False,True,True,False],
+           [False,False,False,False]],dark blue, (3,0))
 
 jBlock = ([[False,False,True,False],
-          [False,False,True,False],
-          [False,True,True,False],
-          [False,False,False,False]],orange,(3,0))
+           [False,False,True,False],
+           [False,True,True,False],
+           [False,False,False,False]],orange,(3,0))
 
 zBlock = ([[False,False,True,False],
-          [False,True,True,False],
-          [False,True,False,False],
-          [False,False,False,False]],red,(3,0))
+           [False,True,True,False],
+           [False,True,False,False],
+           [False,False,False,False]],red,(3,0))
 
 sBlock = ([[False,True,False,False],
-          [False,True,True,False],
-          [False,False,True,False],
-          [False,False,False,False]],green,(3,0))
+           [False,True,True,False],
+           [False,False,True,False],
+           [False,False,False,False]],green,(3,0))
 
 
 rotateBlock :: GameState -> GameState
@@ -77,7 +77,7 @@ data GameState = Game { fallingBlock :: FallBlock,
                         allowReset :: Bool
 		      }
 
-initialField = take 20 (repeat (take 10 (repeat (False,black))))
+initialField = take 20 $ repeat $ take 10 $ repeat (False,black)
 
 initialGameState :: GameState
 initialGameState = Game { fallingBlock = tBlock,
@@ -145,7 +145,7 @@ placeBlock game = game { playField = newField
       (placeRow (block!!0) a color xc:
          placeRow (block!!1) b color xc:
            placeRow (block!!2) c color xc:
-             placeRow (block!!3) d color xc: xs) 
+             placeRow (block!!3) d color xc: xs)
 	     
     place (block,color,(xc,yc)) (x:xs) = x : place (block,color,(xc,yc-1)) xs
 
@@ -155,9 +155,9 @@ placeBlock game = game { playField = newField
 -- | Render the play field with text in console
 
 stringify :: Field -> IO () 
-stringify (x:[]) = putStrLn (stringify' x) 
+stringify (x:[]) = putStrLn $ stringify' x 
 stringify (x:xs) = do
-  putStrLn (stringify' x)
+  putStrLn $ stringify' x
   stringify xs
 
 stringify' :: FieldRow -> String
@@ -182,23 +182,23 @@ renderGame game = pictures [ verticalLines,
     playfield = gridFromField (playField game) 0 --0 är accumulator som håller koll på y-koordinat/vilken rad
 --makeColor8 (0,0,0,0) == transparent
     
-    verticalLines = pictures (verticalLines' 0 verticalLine)
+    verticalLines = pictures $ verticalLines' 0 verticalLine
 
     verticalLines' :: Int -> [Picture] -> [Picture]
     verticalLines' 11 _ = []
     verticalLines' n (x:xs) = translate (fromIntegral(-30*n)) 0 x : verticalLines' (n+1) xs
 
-    verticalLine = take 11 (repeat (color white (Line [(150,-300),(150,300)])))
+    verticalLine = take 11 $ repeat $ color white $ Line [(150,-300),(150,300)]
 
-    horizontalLines = pictures (horizontalLines' 0 horizontalLine)
+    horizontalLines = pictures $ horizontalLines' 0 horizontalLine
 
     horizontalLines' :: Int -> [Picture] -> [Picture]
     horizontalLines' 21 _ = []
     horizontalLines' n (x:xs) = translate 0 (fromIntegral(30*n)) x : horizontalLines' (n+1) xs
 
-    horizontalLine = take 21 (repeat (color white (Line [(-150,-300),(150,-300)])))
+    horizontalLine = take 21 $ repeat $ color white $ Line [(-150,-300),(150,-300)]
 
-    scorecounter = translate (-300) 0 (scale (0.2) (0.2) (color white (Text ("Score: " ++ (show (updateScore game))))))
+    scorecounter = translate (-300) 0 $ scale (0.2) (0.2) $ color white $ Text $ "Score: " ++  (show $ updateScore game)
 
     gridFromField :: Field -> Int -> Picture
     gridFromField (x:xs) 19 = rowOfSquares x 19 0
@@ -319,9 +319,9 @@ moveRows game = game { playField = moveRows' $ playField game
     clearRows :: Field -> Field
     clearRows [] = []
     clearRows (x:xs) | row == x = clearRows xs 
-                 | otherwise = x : clearRows xs
-                  where
-                   row = isCleared (x:xs)
+                     | otherwise = x : clearRows xs
+                     where
+                       row = isCleared (x:xs)
 
     {- isCleared (x:xs)
     Returns the first row that has only True
@@ -339,7 +339,7 @@ moveRows game = game { playField = moveRows' $ playField game
     isCleared :: Field -> FieldRow
     isCleared [] = []
     isCleared (x:xs) | fullRow x = x 
-                 | otherwise = isCleared xs
+                     | otherwise = isCleared xs
 
 {- fullRow (x:xs)
 Checks if a row has only True elements
@@ -358,7 +358,7 @@ fullRow (x:xs) | (fst(x)) = fullRow xs
 -- New block
 resetBlock :: GameState -> GameState
 resetBlock game = game { fallingBlock = nextBlock game,
-                         nextBlock = randomBlock (seed game),
+                         nextBlock = randomBlock $ seed game,
                          scoreCounter = newScore,
                          allowReset = True
                        }
@@ -423,7 +423,7 @@ tryMoveLeft game = if (collision fallBlock nextPosInField) then
 		     
 		     where
 		       (fallBlock,_,(x,y)) = fallingBlock game
-		       nextPosInField = take 4 (nextBlockPos (x-1,y) (playField game))
+		       nextPosInField = take 4 $ nextBlockPos (x-1,y) (playField game)
 
 tryMoveRight :: GameState -> GameState
 tryMoveRight game = if (collision fallBlock nextPosInField) then
@@ -433,17 +433,17 @@ tryMoveRight game = if (collision fallBlock nextPosInField) then
 		     
 		      where
 		        (fallBlock,_,(x,y)) = fallingBlock game
-		        nextPosInField = take 4 (nextBlockPos (x+1,y) (playField game))
+		        nextPosInField = take 4 $ nextBlockPos (x+1,y) (playField game)
 
 -- Swaps current block with next block
 swapBlock :: GameState -> GameState
-swapBlock game = game {fallingBlock = newBlock,
-                      nextBlock = newBlock2,
-                      allowReset = False
+swapBlock game = game { fallingBlock = newBlock,
+                        nextBlock = newBlock2,
+                        allowReset = False
                       }
                  where
                    newBlock = nextBlock game
-                   newBlock2 = randomBlock (seed game)
+                   newBlock2 = randomBlock $ seed game
 
 -- | detects events
 event :: Event -> GameState -> GameState
@@ -451,8 +451,8 @@ event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = increaseSeed $ tryRotate
 event (EventKey (SpecialKey KeyDown) (Down) _ _) game = increaseSeed $ tryMoveDown game
 event (EventKey (SpecialKey KeyRight)(Down) _ _) game = increaseSeed $ tryMoveRight game
 event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = increaseSeed $ tryMoveLeft game
-event (EventKey (Char 'r') (Down) _ _) game = increaseSeed $ initialGameState
-event (EventKey (Char 's') (Down) _ _) game = if allowReset game then
+event (EventKey (Char 'r') (Down) _ _) game = increaseSeed $ initialGameState -- Resets the game
+event (EventKey (Char 'c') (Down) _ _) game = if allowReset game then -- Swaps block if it's allowed
                                               swapBlock game
                                               else
                                               increaseTick game
@@ -472,7 +472,7 @@ main = play
        FullScreen--(InWindow "Tetris" (600,600) (0,0))
        black
        60
-       (initialGameState)
+       initialGameState
        renderGame
-       (event)
-       (time)
+       event
+       time
