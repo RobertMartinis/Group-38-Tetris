@@ -76,7 +76,8 @@ data GameState = Game { fallingBlock :: FallBlock,
                         lineCounter :: Int,
                         allowReset :: Bool,
 			seed :: Int,
-                        level :: Int
+                        level :: Int{-,
+                        allowIncrease :: Bool-}
 		      }
 
 initialField = take 20 $ repeat $ take 10 $ repeat (False,black)
@@ -90,7 +91,8 @@ initialGameState = Game { fallingBlock = tBlock,
                           lineCounter = 0,
                           allowReset = True,
 			  seed = 0,
-                          level = 1
+                          level = 1{-,
+                          allowIncrease = False-}
 			}
 
 fallStep :: GameState -> GameState
@@ -349,10 +351,10 @@ moveRows game = game { playField = newField
 
     -- VARIANT: length xs
 
-    isCleared :: Field -> FieldRow
-    isCleared [] = []
-    isCleared (x:xs) | fullRow x = x 
-                     | otherwise = isCleared xs
+isCleared :: Field -> FieldRow
+isCleared [] = []
+isCleared (x:xs) | fullRow x = x 
+                 | otherwise = isCleared xs
 
 {- fullRow (x:xs)
 Checks if a row has only True elements
@@ -408,7 +410,7 @@ updateLines game = newLines
                           | otherwise = fullRows lines xs
 
 increaseTick :: GameState -> GameState
-increaseTick game = game {tick = (n+1)} --tick = (n+(level game))
+increaseTick game = game {tick = (n+(level game))} --tick = (n+(level game))
   where
     n = tick game
 
@@ -432,6 +434,23 @@ tryRotate game = if (collision rotatedBlock nextPosInField) then
 		   where
 		     (rotatedBlock,_,(x,y)) = fallingBlock (rotateBlock game)
 		     nextPosInField = nextBlockPos (x,y) (playField game)
+{-
+movee :: GameState -> GameState
+movee game = if (collision fallBlock nextPosInField) then
+               placeBlock game
+               else
+               movee game
+-}
+
+-- Places a block instantly
+instaPlace :: GameState -> GameState
+instaPlace game = if (collision fallBlock nextPosInField) then
+                     gameOver $ moveRows $ resetBlock $ placeBlock $ resetTick $ game
+                   else do
+	             instaPlace (fallStep game)
+		 where
+		   (fallBlock,_,(x,y)) = fallingBlock game
+		   nextPosInField = nextBlockPos (x,y+1) (playField game)
 
 tryMoveDown :: GameState -> GameState
 tryMoveDown game = if (collision fallBlock nextPosInField) then
@@ -483,12 +502,24 @@ gameOver game | gameOver' (head(playField game)) = initialGameState
                 gameOver' (x:xs) | fst(x) = True
                                  | otherwise = gameOver' xs
 
+{-
+-- Kolla om rader ska rensas???
+increaseLevel :: GameState -> GameState
+increaseLevel game = game {level = newLevel}
+  where
+    newLevel = increaseLevel' game (lineCounter game)
+
+    increaseLevel' :: GameState -> Int -> Int
+    increaseLevel' game lines | (lines `mod` 5 == 0) && (allowIncrease game) = level game + 1
+                              | otherwise = level game
+-}
 -- | detects events
 event :: Event -> GameState -> GameState
 event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = increaseSeed $ tryRotate game
 event (EventKey (SpecialKey KeyDown) (Down) _ _) game = increaseSeed $ tryMoveDown game
 event (EventKey (SpecialKey KeyRight)(Down) _ _) game = increaseSeed $ tryMoveRight game
 event (EventKey (SpecialKey KeyLeft) (Down) _ _) game = increaseSeed $ tryMoveLeft game
+event (EventKey (SpecialKey KeySpace) (Down) _ _) game = instaPlace game -- Kraschar spelet lmao space finns inte XD
 event (EventKey (Char 'r') (Down) _ _) game = increaseSeed $ initialGameState -- Resets the game
 event (EventKey (Char 'c') (Down) _ _) game = if allowReset game then -- Swaps block if it's allowed
                                               swapBlock game
