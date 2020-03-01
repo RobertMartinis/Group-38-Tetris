@@ -73,8 +73,10 @@ data GameState = Game { fallingBlock :: FallBlock,
                         playField :: Field,
 			tick :: Int,
                         scoreCounter :: Int,
+                        lineCounter :: Int,
+                        allowReset :: Bool,
 			seed :: Int,
-                        allowReset :: Bool
+                        level :: Int
 		      }
 
 initialField = take 20 $ repeat $ take 10 $ repeat (False,black)
@@ -85,8 +87,10 @@ initialGameState = Game { fallingBlock = tBlock,
                           playField = initialField,
 			  tick = 0,
                           scoreCounter = 0,
+                          lineCounter = 0,
+                          allowReset = True,
 			  seed = 0,
-                          allowReset = True
+                          level = 1
 			}
 
 fallStep :: GameState -> GameState
@@ -165,8 +169,8 @@ stringify' [] = []
 stringify' ((cell,color):xs) | cell = "x " ++ stringify' xs
                              | otherwise = "_ " ++ stringify' xs	
 
-fst' (a,_,_) = a
-trd' (_,_,a) = a
+--fst' (a,_,_) = a
+--trd' (_,_,a) = a
 
 -- | Render gamestate with Gloss
 
@@ -174,6 +178,8 @@ renderGame :: GameState -> Picture
 renderGame game = pictures [ verticalLines,
                              horizontalLines,
                              scorecounter,
+                             linecounter,
+                             level,
          		     fallingblock,
 			     nextblock,
                              playfield
@@ -200,6 +206,10 @@ renderGame game = pictures [ verticalLines,
 
     scorecounter = translate (-300) 0 $ scale (0.2) (0.2) $ color white $ Text $ "Score: " ++  (show $ updateScore game)
 
+    linecounter = translate (-300) (-50) $ scale (0.2) (0.2) $ color white $ Text $ "Lines: " ++  (show $ updateLines game)
+
+    level = translate (-300) (-100) $ scale (0.2) (0.2) $ color white $ Text $ "Level: " ++  (show $ showLevel game)
+   
     gridFromField :: Field -> Int -> Picture
     gridFromField (x:xs) 19 = rowOfSquares x 19 0
     gridFromField (x:xs) r  = pictures [
@@ -264,9 +274,12 @@ collision ((x:xs):xss) ((y:ys):yss) = (x&&y) || (collision (xs:xss) (ys:yss))
 
 -- Add new rows
 moveRows :: GameState -> GameState
-moveRows game = game { playField = moveRows' $ playField game
+moveRows game = game { playField = newField
                      }
   where
+    field = playField game
+    newField = moveRows' field
+    
     moveRows' :: Field -> Field
     moveRows' field = addRow (rowsMissing 20 (clearRows field)) (clearRows field)
 
@@ -352,20 +365,24 @@ EXAMPLES: fullRow [(True,black),(False,black)] == False
 
 fullRow :: FieldRow -> Bool
 fullRow [] = True
-fullRow (x:xs) | (fst(x)) = fullRow xs
+fullRow (x:xs) | fst(x)    = fullRow xs
                | otherwise = False
+
+--increaseLevel :: GameState -> Int
+--increaseLevel game = (level game) + 1
+
+showLevel :: GameState -> Int
+showLevel game = level game
 
 -- New block
 resetBlock :: GameState -> GameState
 resetBlock game = game { fallingBlock = nextBlock game,
                          nextBlock = randomBlock $ seed game,
-                         scoreCounter = newScore,
+                         scoreCounter = updateScore game,
+                         lineCounter = updateLines game,
                          allowReset = True
                        }
-  where
-    (block,color,(x,_)) = fallingBlock game
-    field = playField game
-    newScore = updateScore game
+
 
 -- Takes gameState as an input and gives 10 points * (amount of rows cleared) per row
 updateScore :: GameState -> Int
@@ -379,8 +396,19 @@ updateScore game = newScore
     fullRows score multiplier (x:xs) | fullRow x = fullRows (score+10) (multiplier+1) xs
                                      | otherwise = fullRows multiplier score xs
 
+updateLines :: GameState -> Int
+updateLines game = newLines
+  where
+    field = playField game
+    newLines = (lineCounter game) + (fullRows 0 field)
+
+    fullRows :: Int -> Field -> Int
+    fullRows lines [] = lines -- multiplier gives more points if more than 1 row is cleared
+    fullRows lines (x:xs) | fullRow x = fullRows (lines+1) xs
+                          | otherwise = fullRows lines xs
+
 increaseTick :: GameState -> GameState
-increaseTick game = game {tick = (n+1)}
+increaseTick game = game {tick = (n+1)} --tick = (n+(level game))
   where
     n = tick game
 
@@ -392,8 +420,8 @@ increaseSeed game = game {seed = (n+1)}
 resetTick :: GameState -> GameState
 resetTick game = game {tick = 0}
 
-checkTick :: Int -> Bool
-checkTick n = n > 19
+checkTick :: GameState -> Bool
+checkTick game = tick game > 19
 
 tryRotate :: GameState -> GameState
 tryRotate game = if (collision rotatedBlock nextPosInField) then
@@ -406,8 +434,8 @@ tryRotate game = if (collision rotatedBlock nextPosInField) then
 		     nextPosInField = nextBlockPos (x,y) (playField game)
 
 tryMoveDown :: GameState -> GameState
-tryMoveDown game = if (collision fallBlock nextPosInField) then do
-                     moveRows $ resetBlock $ placeBlock $ resetTick $ game
+tryMoveDown game = if (collision fallBlock nextPosInField) then
+                     gameOver $ moveRows $ resetBlock $ placeBlock $ resetTick $ game
                    else
 	             resetTick $ fallStep $ game
 		 
@@ -445,6 +473,16 @@ swapBlock game = game { fallingBlock = newBlock,
                    newBlock = nextBlock game
                    newBlock2 = randomBlock $ seed game
 
+-- Checks if game is over (any blocks are on top row)
+gameOver :: GameState -> GameState
+gameOver game | gameOver' (head(playField game)) = initialGameState
+              | otherwise = game
+              where
+                gameOver' :: FieldRow -> Bool
+                gameOver' [] = False
+                gameOver' (x:xs) | fst(x) = True
+                                 | otherwise = gameOver' xs
+
 -- | detects events
 event :: Event -> GameState -> GameState
 event (EventKey (SpecialKey KeyUp)   (Down) _ _) game = increaseSeed $ tryRotate game
@@ -456,14 +494,13 @@ event (EventKey (Char 'c') (Down) _ _) game = if allowReset game then -- Swaps b
                                               swapBlock game
                                               else
                                               increaseTick game
-
-event _ game = if (checkTick (tick game)) then
+event _ game = if (checkTick game) then
 	         tryMoveDown game
 	       else
 	         increaseTick game
                  
 time :: Float -> GameState -> GameState
-time _ game = if (checkTick (tick game)) then
+time _ game = if (checkTick game) then
 	         tryMoveDown game
 	       else
 	         increaseTick game
