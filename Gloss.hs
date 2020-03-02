@@ -16,7 +16,7 @@ type GridSquare = (Bool, Color)
 type Field = [[GridSquare]]
 
 {- A row in the background playing-grid. 
-   INVARIANT: ?
+   INVARIANT: Gridsquare contains 10 bool-values.
 -}
 type FieldRow = [GridSquare]
 
@@ -25,7 +25,9 @@ type FieldRow = [GridSquare]
 -}
 type Coords = (Int,Int)
 
- 
+ {- The falling playing block. (Block, Color, Coords) Denotes Tetrimino shape, its color and the current coordinates
+    of the falling block in the grid.
+  -}
 type FallBlock = (Block,Color,Coords)
 
 
