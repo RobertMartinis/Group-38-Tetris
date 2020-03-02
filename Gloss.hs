@@ -16,9 +16,9 @@ randomBlock seed = blockList !! (mod (seed*2) 7)
     blockList = [tBlock,iBlock,oBlock,jBlock,lBlock,sBlock,zBlock]
     
 -- Tetriminos
-tBlock  =  ([[False,False,False,False],
-	     [True,True,True,False],
-             [False,True,False,False],
+tBlock  =  ([[True,True,True,False],
+	     [False,True,False,False],
+             [False,False,False,False],
              [False,False,False,False]],makeColorI 255 0 255 255,(3,0))
 
 iBlock = ([[False,False,True,False],
@@ -26,9 +26,9 @@ iBlock = ([[False,False,True,False],
            [False,False,True,False],
            [False,False,True,False]],makeColorI 0 100 255 255,(3,0))
 
-oBlock = ([[False,False,False,False],
+oBlock = ([[False,True,True,False],
            [False,True,True,False],
-           [False,True,True,False],
+           [False,False,False,False],
            [False,False,False,False]],yellow,(3,0))
 
 lBlock = ([[False,True,False,False],
@@ -51,13 +51,16 @@ sBlock = ([[False,True,False,False],
            [False,False,True,False],
            [False,False,False,False]],green,(3,0))
 
-
 rotateBlock :: GameState -> GameState
-rotateBlock game = game { fallingBlock = (newBlock,color,(x,y))
+rotateBlock game = game { fallingBlock = ((checkBlock block),color,(x,y))
                         }
   where
+    checkBlock :: Block -> Block
+    checkBlock block | block == o_block = block
+                     | otherwise = rotateBlock' block
+
+    (o_block,_,_) = oBlock
     (block, color, (x,y)) = fallingBlock game
-    newBlock = rotateBlock' block
     
     rotateBlock' :: Block -> Block
     rotateBlock' [(a1:a2:a3:a4:[]),
@@ -76,9 +79,8 @@ data GameState = Game { fallingBlock :: FallBlock,
                         lineCounter :: Int,
                         allowReset :: Bool,
 			seed :: Int,
-                        level :: Int{-,
-                        allowIncrease :: Bool-}
-		      }
+                        level :: Int
+                      }
 
 initialField = take 20 $ repeat $ take 10 $ repeat (False,black)
 
@@ -91,8 +93,7 @@ initialGameState = Game { fallingBlock = tBlock,
                           lineCounter = 0,
                           allowReset = True,
 			  seed = 0,
-                          level = 1{-,
-                          allowIncrease = False-}
+                          level = 1
 			}
 
 fallStep :: GameState -> GameState
@@ -121,7 +122,6 @@ placeBlock game = game { playField = newField
                        }
   where
     (block, color, (x,y)) = fallingBlock game
-    field = playField game
     
     placeRow :: [Bool] -> FieldRow -> Color -> Int -> FieldRow
     placeRow _ [] _ _ = []
@@ -154,7 +154,6 @@ placeBlock game = game { playField = newField
              placeRow (block!!3) d color xc: xs)
 	     
     place (block,color,(xc,yc)) (x:xs) = x : place (block,color,(xc,yc-1)) xs
-
 
     newField = place (fallingBlock game) (playField game)
 
@@ -276,12 +275,9 @@ collision ((x:xs):xss) ((y:ys):yss) = (x&&y) || (collision (xs:xss) (ys:yss))
 
 -- Add new rows
 moveRows :: GameState -> GameState
-moveRows game = game { playField = newField
+moveRows game = game { playField = moveRows' (playField game)
                      }
   where
-    field = playField game
-    newField = moveRows' field
-    
     moveRows' :: Field -> Field
     moveRows' field = addRow (rowsMissing 20 (clearRows field)) (clearRows field)
 
@@ -384,8 +380,7 @@ resetBlock game = game { fallingBlock = nextBlock game,
                          lineCounter = updateLines game,
                          allowReset = True
                        }
-
-
+                 
 -- Takes gameState as an input and gives 10 points * (amount of rows cleared) per row
 updateScore :: GameState -> Int
 updateScore game = newScore
@@ -405,22 +400,21 @@ updateLines game = newLines
     newLines = (lineCounter game) + (fullRows 0 field)
 
     fullRows :: Int -> Field -> Int
-    fullRows lines [] = lines -- multiplier gives more points if more than 1 row is cleared
+    fullRows lines [] = lines -- returns amount of rows cleared
     fullRows lines (x:xs) | fullRow x = fullRows (lines+1) xs
                           | otherwise = fullRows lines xs
 
 increaseTick :: GameState -> GameState
-increaseTick game = game {tick = (n+(level game))} --tick = (n+(level game))
-  where
-    n = tick game
+increaseTick game = game { tick = (tick game+1)
+                         } --tick = (n+(level game))
 
 increaseSeed :: GameState -> GameState
-increaseSeed game = game {seed = (n+1)}
-  where
-    n = seed game
+increaseSeed game = game { seed = (seed game+1)
+                         }
 
 resetTick :: GameState -> GameState
-resetTick game = game {tick = 0}
+resetTick game = game { tick = 0
+                      }
 
 checkTick :: GameState -> Bool
 checkTick game = tick game > 19
@@ -434,13 +428,6 @@ tryRotate game = if (collision rotatedBlock nextPosInField) then
 		   where
 		     (rotatedBlock,_,(x,y)) = fallingBlock (rotateBlock game)
 		     nextPosInField = nextBlockPos (x,y) (playField game)
-{-
-movee :: GameState -> GameState
-movee game = if (collision fallBlock nextPosInField) then
-               placeBlock game
-               else
-               movee game
--}
 
 -- Places a block instantly
 instaPlace :: GameState -> GameState
@@ -455,7 +442,7 @@ instaPlace game = if (collision fallBlock nextPosInField) then
 tryMoveDown :: GameState -> GameState
 tryMoveDown game = if (collision fallBlock nextPosInField) then
                      gameOver $ moveRows $ resetBlock $ placeBlock $ resetTick $ game
-                   else
+                   else 
 	             resetTick $ fallStep $ game
 		 
 		 where
@@ -504,6 +491,7 @@ gameOver game | gameOver' (head(playField game)) = initialGameState
 
 {-
 -- Kolla om rader ska rensas???
+-- if allowIncrease == True then
 increaseLevel :: GameState -> GameState
 increaseLevel game = game {level = newLevel}
   where
