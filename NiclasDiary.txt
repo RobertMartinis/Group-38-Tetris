@@ -1,0 +1,15 @@
+Dagbok
+
+18feb   1h      discussed project
+20feb   2h      created data GameState
+20feb   0.5h    created function for rotating a block
+20feb   1h      made an initial game state
+20feb   3h      place block on play field
+22feb   3h      added a collision check function.
+24feb   2h      created render function for the game state.
+24feb   4h      main function with play and events.
+26feb   0.5h    try to move. If collision, don't move.
+27feb   1h      random block generator based off of user inputs for pseudo randomness.
+28feb   0.5h    added function for auto falling block, not waiting for event.
+
+18feb - 02mar   (almost) constant chat communication, trading ideas and thoughts.
