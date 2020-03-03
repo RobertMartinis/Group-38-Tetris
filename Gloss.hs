@@ -1,3 +1,4 @@
+import Test.HUnit -- For test cases
 import Graphics.Gloss -- For generating user interface and graphics to the game
 import Graphics.Gloss.Interface.IO.Interact -- For detecting user inputs. Used to rotate the playing-block.
 
@@ -42,6 +43,16 @@ randomBlock seed = blockList !! (mod (seed*2) 7)
 {- Tetrominoes (All blocks consisting of 4 squares)
    They exist inside a 4x4 grid to make rotation easier
    They also have a color and a coordinate -}
+
+testBlock = [[True,True,True,False],
+	     [False,True,False,False],
+             [False,False,False,False],
+             [False,False,False,False]]
+
+testBlock2 = [[False,False,True,False],
+           [False,False,True,False],
+           [False,False,True,False],
+           [False,False,True,False]]
     
 tBlock  =  ([[True,True,True,False],
 	     [False,True,False,False],
@@ -678,4 +689,92 @@ main = play
        initialGameState 
        renderGame
        event -- Handles inputs
-       auto 
+       auto
+
+t_randomBlock = TestCase $ assertEqual ("random block: ") (randomBlock 1) (([[False,True,True,False],[False,True,True,False],[False,False,False,False],[False,False,False,False]],yellow,(3,0)))
+
+t_RotateBlock =
+  let tBlock_test = first $ fallingBlock $ rotateBlock initialGameState 
+      t = True
+      f = False
+      -- Help function to get first element from 3-tuple
+      first :: (a,b,c) -> a
+      first (n,_,_) = n
+  in
+  TestCase $ assertEqual ("Rotate tBlock") (tBlock_test) ([[f,f,f,t],[f,f,t,t],[f,f,f,t],[f,f,f,f]]) 
+
+t_fallStep =
+  let blockDownOneStep = getY $ fallingBlock $ fallStep initialGameState
+      getY :: (a,b,(c,c)) -> c
+      getY (_,_,(_,yc)) = yc
+  in
+    TestCase $ assertEqual ("Fall step: ") (1) (blockDownOneStep)
+
+t_stepRight =
+  let blockRightOneStep = getX $ fallingBlock $ stepRight initialGameState
+      getX :: (a,b,(c,c)) -> c
+      getX (_,_,(xc,_)) = xc
+  in
+    TestCase $ assertEqual ("Fall step: ") (4) (blockRightOneStep)
+
+t_stepLeft =
+  let blockLeftOneStep = getX $ fallingBlock $ stepLeft initialGameState
+      getX :: (a,b,(c,c)) -> c
+      getX (_,_,(xc,_)) = xc
+  in
+    TestCase $ assertEqual ("Fall step: ") (2) (blockLeftOneStep)
+
+t_placeBlock =
+  let blockOnField_firstRow = head $ playField $ placeBlock initialGameState
+      eb = (False,black)                   --empty block
+      pb = (True,makeColorI 255 0 255 255) --purple block
+  in
+    TestCase $ assertEqual ("Place block: ") (blockOnField_firstRow) ([eb,eb,eb,pb,pb,pb,eb,eb,eb,eb])
+
+t_nextBlockPos = undefined -- Needs field
+
+t_collision = undefined
+
+t_moveRows = let
+  gameToField :: GameState -> Field
+  gameToField game = playField game
+  tGameState = Game {playField = take 10(repeat(True,green)) : take 19 (repeat (take 10(repeat (False,black))))}
+  in
+    TestCase $ assertEqual ("move Rows: ") (gameToField $ moveRows tGameState) (gameToField initialGameState)
+
+t_isFull = TestCase $ assertEqual ("Is Full: ") (isFull (head(initialField))) (False)
+
+t_showLevel = TestCase $ assertEqual ("Show level: ") (showLevel initialGameState) (1)
+
+t_resetBlock = let
+  gameToThings :: GameState -> (FallBlock,FallBlock,Int,Int,Bool)
+  gameToThings game = ((fallingBlock game),(nextBlock game),(scoreCounter game),(lineCounter game),(allowSwap game))
+  tGameState = Game {fallingBlock = lBlock, nextBlock = tBlock, scoreCounter = 0, lineCounter = 0, allowSwap = True} --tGameState is the GameState is the next GameState if you resetBlock once
+  in
+    TestCase $ assertEqual ("Reset block: ") (gameToThings (resetBlock initialGameState)) (gameToThings (tGameState))
+
+t_updateScore = TestCase $ assertEqual ("Update score: ") (updateScore initialGameState) (0)
+
+t_updateLines = TestCase $ assertEqual ("Update score: ") (updateLines initialGameState) (0)
+
+t_increaseTick = let
+  gameToInt :: GameState -> Int
+  gameToInt game = tick game
+  in
+    TestCase $ assertEqual ("increaseTick: ") (gameToInt (increaseTick initialGameState)) (1)
+
+t_increaseSeed = let
+  gameToInt :: GameState -> Int
+  gameToInt game = seed game
+  in
+    TestCase $ assertEqual ("increaseTick: ") (gameToInt (increaseSeed initialGameState)) (1)
+
+t_resetTick = let
+  gameToInt :: GameState -> Int
+  gameToInt game = tick game
+  in
+    TestCase $ assertEqual ("increaseTick: ") (gameToInt (resetTick initialGameState)) (0)
+
+t_checkTick = TestCase $ assertEqual ("increaseTick: ") (checkTick initialGameState) (False)
+
+runtests = runTestTT $ TestList [t_randomBlock, t_RotateBlock, t_fallStep, t_stepRight, t_stepLeft, t_placeBlock, t_moveRows, t_isFull, t_showLevel, t_resetBlock, t_updateScore, t_updateLines, t_increaseTick, t_increaseSeed, t_resetTick, t_checkTick]
