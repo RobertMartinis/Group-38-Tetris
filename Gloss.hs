@@ -691,6 +691,8 @@ main = play
        event -- Handles inputs
        auto
 
+-- Test Case:
+
 t_randomBlock = TestCase $ assertEqual ("random block: ") (randomBlock 1) (([[False,True,True,False],[False,True,True,False],[False,False,False,False],[False,False,False,False]],yellow,(3,0)))
 
 t_RotateBlock =
@@ -708,21 +710,21 @@ t_fallStep =
       getY :: (a,b,(c,c)) -> c
       getY (_,_,(_,yc)) = yc
   in
-    TestCase $ assertEqual ("Fall step: ") (1) (blockDownOneStep)
+    TestCase $ assertEqual ("Fall step: ") (blockDownOneStep) (1)
 
 t_stepRight =
   let blockRightOneStep = getX $ fallingBlock $ stepRight initialGameState
       getX :: (a,b,(c,c)) -> c
       getX (_,_,(xc,_)) = xc
   in
-    TestCase $ assertEqual ("Fall step: ") (4) (blockRightOneStep)
+    TestCase $ assertEqual ("Fall step: ") (blockRightOneStep) (4)
 
 t_stepLeft =
   let blockLeftOneStep = getX $ fallingBlock $ stepLeft initialGameState
       getX :: (a,b,(c,c)) -> c
       getX (_,_,(xc,_)) = xc
   in
-    TestCase $ assertEqual ("Fall step: ") (2) (blockLeftOneStep)
+    TestCase $ assertEqual ("Fall step: ") (blockLeftOneStep) (2)
 
 t_placeBlock =
   let blockOnField_firstRow = head $ playField $ placeBlock initialGameState
@@ -733,14 +735,14 @@ t_placeBlock =
 
 t_nextBlockPos = undefined -- Needs field
 
-t_collision = undefined
+t_collision = undefined -- Needs field
 
 t_moveRows = let
-  gameToField :: GameState -> Field
-  gameToField game = playField game
-  tGameState = Game {playField = take 10(repeat(True,green)) : take 19 (repeat (take 10(repeat (False,black))))}
+  gb = (True,green) -- green Block
+  bb = (False,black) -- black Block
+  tGameState = Game {playField = take 10(repeat gb) : take 19 (repeat (take 10(repeat bb)))}
   in
-    TestCase $ assertEqual ("move Rows: ") (gameToField $ moveRows tGameState) (gameToField initialGameState)
+    TestCase $ assertEqual ("move Rows: ") (playField $ moveRows tGameState) (playField initialGameState)
 
 t_isFull = TestCase $ assertEqual ("Is Full: ") (isFull (head(initialField))) (False)
 
@@ -757,24 +759,36 @@ t_updateScore = TestCase $ assertEqual ("Update score: ") (updateScore initialGa
 
 t_updateLines = TestCase $ assertEqual ("Update score: ") (updateLines initialGameState) (0)
 
-t_increaseTick = let
-  gameToInt :: GameState -> Int
-  gameToInt game = tick game
-  in
-    TestCase $ assertEqual ("increaseTick: ") (gameToInt (increaseTick initialGameState)) (1)
+t_increaseTick = TestCase $ assertEqual ("increaseTick: ") (tick (increaseTick initialGameState)) (1)
 
-t_increaseSeed = let
-  gameToInt :: GameState -> Int
-  gameToInt game = seed game
-  in
-    TestCase $ assertEqual ("increaseTick: ") (gameToInt (increaseSeed initialGameState)) (1)
+t_increaseSeed = TestCase $ assertEqual ("increaseSeed: ") (seed (increaseSeed initialGameState)) (1)
 
-t_resetTick = let
-  gameToInt :: GameState -> Int
-  gameToInt game = tick game
-  in
-    TestCase $ assertEqual ("increaseTick: ") (gameToInt (resetTick initialGameState)) (0)
+t_resetTick = TestCase $ assertEqual ("increaseTick: ") (tick (resetTick initialGameState)) (tick initialGameState)
 
 t_checkTick = TestCase $ assertEqual ("increaseTick: ") (checkTick initialGameState) (False)
 
-runtests = runTestTT $ TestList [t_randomBlock, t_RotateBlock, t_fallStep, t_stepRight, t_stepLeft, t_placeBlock, t_moveRows, t_isFull, t_showLevel, t_resetBlock, t_updateScore, t_updateLines, t_increaseTick, t_increaseSeed, t_resetTick, t_checkTick]
+t_instaPlace =
+  let pb = (True,makeColorI 255 0 255 255) -- purple block
+      bb = (False,black) -- black block
+      field = take 18 (repeat (take 10(repeat bb))) ++ [[bb,bb,bb,pb,pb,pb,bb,bb,bb,bb]] ++ [[bb,bb,bb,bb,pb,bb,bb,bb,bb,bb]] -- Field after instaplaced tBlock
+  in
+    TestCase $ assertEqual ("instaPlace: ") (playField $ instaPlace initialGameState) (field)
+    
+
+-- lBlock -> tBlock
+
+t_swapBlock = let
+  gameToThings :: GameState -> (FallBlock,FallBlock,Bool)
+  gameToThings game = ((fallingBlock game),(nextBlock game),(allowSwap game))
+  tGameState = Game {fallingBlock = lBlock, nextBlock = tBlock, allowSwap = False}
+  in
+    TestCase $ assertEqual ("swapBlock: ") (gameToThings $ swapBlock initialGameState) (gameToThings tGameState)
+
+t_gameOver = let
+  pb = (True,makeColorI 255 0 255 255) -- purple block
+  bb = (False,black) -- black block
+  tGameState = Game {playField = [[bb,bb,bb,pb,bb,bb,pb,pb,bb,bb]] ++ take 19 (repeat (take 10(repeat bb)))}
+  in
+    TestCase $ assertEqual ("gameOver: ") (playField $ gameOver tGameState) (playField initialGameState)
+
+runtests = runTestTT $ TestList [t_randomBlock, t_RotateBlock, t_fallStep, t_stepRight, t_stepLeft, t_placeBlock, t_moveRows, t_isFull, t_showLevel, t_resetBlock, t_updateScore, t_updateLines, t_increaseTick, t_increaseSeed, t_resetTick, t_checkTick, t_instaPlace, t_swapBlock, t_gameOver]
