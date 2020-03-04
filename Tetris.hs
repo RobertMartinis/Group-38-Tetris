@@ -539,9 +539,9 @@ RETURNS: updated playField and increasted tick in game if rotation is possible, 
 -}
 tryRotate :: GameState -> GameState
 tryRotate game = if (collision rotatedBlock nextPosInField) then
-                   increaseTick game
+                   game
 		 else
-		   rotateBlock $ increaseTick game
+		   rotateBlock game
 		   
 		   where
 		     (rotatedBlock,_,(x,y)) = fallingBlock (rotateBlock game)
@@ -585,9 +585,9 @@ RETURNS: updated playField in game
 
 tryMoveLeft :: GameState -> GameState
 tryMoveLeft game = if (collision fallBlock nextPosInField) then 
-                     increaseTick game
+                     game
 		   else
-		     increaseTick $ stepLeft game
+		     stepLeft game
 		     
 		     where
 		       (fallBlock,_,(x,y)) = fallingBlock game
@@ -600,9 +600,9 @@ RETURNS: updated playField in game
 
 tryMoveRight :: GameState -> GameState
 tryMoveRight game = if (collision fallBlock nextPosInField) then
-                      increaseTick game
+                      game
 		    else
-		      increaseTick $ stepRight game
+		      stepRight game
 		     
 		      where
 		        (fallBlock,_,(x,y)) = fallingBlock game
@@ -655,11 +655,11 @@ event (EventKey (Char 'r') (Down) _ _) game = increaseSeed $ initialGameState --
 event (EventKey (Char 'c') (Down) _ _) game = if allowSwap game then -- Swaps block if it's allowed
                                               swapBlock game
                                               else
-                                              increaseTick game
+                                              game
 event _ game = if (checkTick game) then
 	         tryMoveDown game
 	       else
-	         increaseTick game
+	         game
 
 {- auto time game
 Checks tick in game and if tick is greater than 19, the function calls for tryMoveDown, otherwise increases tick in game
